@@ -102,7 +102,7 @@ export function DashboardSidebar() {
             <div
               className={cn(
                 "flex h-16 items-center border-b px-4",
-                isCollapsed ? "md:justify-center" : "justify-between",
+                isCollapsed ? "md:justify-center" : "justify-between"
               )}
             >
               <Link href="/dashboard" className="flex items-center gap-2">
@@ -128,17 +128,31 @@ export function DashboardSidebar() {
               </Button>
             </div>
 
-            {/* User Profile */}
-            <div
-              className={cn(
-                "flex items-center gap-3 border-b p-4",
-                isCollapsed ? "md:justify-center" : "justify-start",
-              )}
-            >
-              <Avatar className="h-9 w-9">
-                <AvatarImage src="/diverse-user-avatars.png" alt="@usuário" />
-                <AvatarFallback>US</AvatarFallback>
-              </Avatar>
+            {/* User Profile com botão de expansão */}
+            <div className={cn(
+              "flex items-center gap-3 border-b p-4",
+              isCollapsed ? "md:justify-center" : "justify-start",
+            )}>
+              <div className="relative flex items-center">
+                <Avatar className="h-9 w-9">
+                  <AvatarImage src="/diverse-user-avatars.png" alt="@usuário" />
+                  <AvatarFallback>US</AvatarFallback>
+                </Avatar>
+
+                {/* Botão de expansão visível apenas quando colapsado no desktop */}
+                {isCollapsed && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute -right-4 h-6 w-6 rounded-full bg-background"
+                    onClick={() => useSidebar.getState().onExpand()}
+                    aria-label="Expandir menu"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+
               {(!isCollapsed || !isMounted) && (
                 <div className="flex flex-col md:flex">
                   <span className="text-sm font-medium">Usuário Demo</span>
@@ -247,20 +261,6 @@ export function DashboardSidebar() {
               </div>
             </div>
           </div>
-
-          {/* Collapse/Expand Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "absolute -right-4 top-20 h-8 w-8 rounded-full border bg-background shadow-md hidden md:flex",
-              !isCollapsed && "md:hidden",
-            )}
-            onClick={onCollapse}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </aside>
       </TooltipProvider>
     </>
   )
