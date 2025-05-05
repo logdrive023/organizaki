@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Menu, Home, Info, Sparkles, Award, LogIn, CalendarPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet"
@@ -13,6 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
 
   // Função para implementar o scroll suave apenas na página inicial
   const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
@@ -35,6 +36,22 @@ export function Header() {
     }
   }
 
+  // Função para navegar para outra página e garantir que comece do topo
+  const handleNavigation = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
+    e.preventDefault()
+
+    // Fecha o menu mobile se estiver aberto
+    if (isOpen) {
+      setIsOpen(false)
+    }
+
+    // Navega para a página desejada
+    router.push(path)
+
+    // Garante que a página comece do topo
+    window.scrollTo(0, 0)
+  }
+
   // Efeito para lidar com links de hash na URL quando a página carrega
   useEffect(() => {
     // Verifica se há um hash na URL e se estamos na página inicial
@@ -52,6 +69,9 @@ export function Header() {
           })
         }
       }, 100)
+    } else {
+      // Se não há hash ou não estamos na página inicial, rola para o topo
+      window.scrollTo(0, 0)
     }
   }, [pathname])
 
@@ -98,20 +118,17 @@ export function Header() {
 
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-4">
-          <Link
+          <a
             href="/login"
             className="text-muted-foreground hover:text-foreground transition-colors"
-            onClick={(e) => {
-              // Previne comportamento padrão se necessário
-              if (window.location.pathname === "/login") {
-                e.preventDefault()
-              }
-            }}
+            onClick={(e) => handleNavigation(e, "/login")}
           >
             Entrar
-          </Link>
+          </a>
           <Button asChild>
-            <Link href="/register">Criar Evento</Link>
+            <a href="/register" onClick={(e) => handleNavigation(e, "/register")}>
+              Criar Evento
+            </a>
           </Button>
         </div>
 
@@ -197,22 +214,24 @@ export function Header() {
               <div className="h-px bg-border my-2"></div>
 
               <SheetClose asChild>
-                <Link
+                <a
                   href="/login"
                   className="flex items-center gap-3 px-4 py-3 rounded-md hover:bg-muted transition-colors"
+                  onClick={(e) => handleNavigation(e, "/login")}
                 >
                   <LogIn className="h-5 w-5 text-primary" />
                   <span>Entrar</span>
-                </Link>
+                </a>
               </SheetClose>
               <SheetClose asChild>
-                <Link
+                <a
                   href="/register"
                   className="flex items-center gap-3 px-4 py-3 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                  onClick={(e) => handleNavigation(e, "/register")}
                 >
                   <CalendarPlus className="h-5 w-5" />
                   <span>Criar Evento</span>
-                </Link>
+                </a>
               </SheetClose>
             </nav>
           </SheetContent>
