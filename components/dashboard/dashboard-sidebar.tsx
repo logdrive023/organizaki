@@ -17,6 +17,7 @@ import {
   Home,
   LogOut,
   X,
+  Bell,
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -47,6 +48,11 @@ const navItems = [
     icon: BarChart,
   },
   {
+    title: "Notificações",
+    href: "/dashboard/notificacoes",
+    icon: Bell,
+  },
+  {
     title: "Configurações",
     href: "/dashboard/configuracoes",
     icon: Settings,
@@ -56,7 +62,7 @@ const navItems = [
 export function DashboardSidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { isCollapsed, onCollapse } = useSidebar()
+  const { isCollapsed, onCollapse, onExpand, toggle } = useSidebar()
   const [isMounted, setIsMounted] = useState(false)
 
   // Garantir renderização do lado do cliente
@@ -90,11 +96,9 @@ export function DashboardSidebar() {
       <TooltipProvider delayDuration={0}>
         <aside
           className={cn(
-            "fixed left-0 top-0 z-50 flex h-screen border-r bg-background transition-transform duration-300",
-            isCollapsed ? "-translate-x-full" : "translate-x-0",
-            "md:translate-x-0 md:z-30",
-            isCollapsed ? "md:w-16" : "md:w-64",
-            "w-64",
+            "fixed left-0 top-0 z-50 flex h-screen border-r bg-background transition-all duration-300",
+            isCollapsed ? "-translate-x-full md:translate-x-0 md:w-16" : "translate-x-0 w-64 md:w-64",
+            "md:z-30",
           )}
         >
           <div className="flex h-full w-full flex-col">
@@ -102,7 +106,7 @@ export function DashboardSidebar() {
             <div
               className={cn(
                 "flex h-16 items-center border-b px-4",
-                isCollapsed ? "md:justify-center" : "justify-between"
+                isCollapsed ? "md:justify-center" : "justify-between",
               )}
             >
               <Link href="/dashboard" className="flex items-center gap-2">
@@ -122,17 +126,19 @@ export function DashboardSidebar() {
                 variant="ghost"
                 size="icon"
                 className={cn("h-8 w-8 hidden md:flex", isCollapsed && "md:hidden")}
-                onClick={onCollapse}
+                onClick={toggle}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
             </div>
 
             {/* User Profile com botão de expansão */}
-            <div className={cn(
-              "flex items-center gap-3 border-b p-4",
-              isCollapsed ? "md:justify-center" : "justify-start",
-            )}>
+            <div
+              className={cn(
+                "flex items-center gap-3 border-b p-4",
+                isCollapsed ? "md:justify-center" : "justify-start",
+              )}
+            >
               <div className="relative flex items-center">
                 <Avatar className="h-9 w-9">
                   <AvatarImage src="/diverse-user-avatars.png" alt="@usuário" />
@@ -144,8 +150,8 @@ export function DashboardSidebar() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute -right-4 h-6 w-6 rounded-full bg-background"
-                    onClick={() => useSidebar.getState().onExpand()}
+                    className="absolute -right-4 h-6 w-6 rounded-full bg-background hidden md:flex"
+                    onClick={toggle}
                     aria-label="Expandir menu"
                   >
                     <ChevronRight className="h-4 w-4" />
@@ -153,8 +159,8 @@ export function DashboardSidebar() {
                 )}
               </div>
 
-              {(!isCollapsed || !isMounted) && (
-                <div className="flex flex-col md:flex">
+              {!isCollapsed && (
+                <div className="flex flex-col">
                   <span className="text-sm font-medium">Usuário Demo</span>
                   <span className="text-xs text-muted-foreground">usuario@exemplo.com</span>
                 </div>
@@ -174,6 +180,7 @@ export function DashboardSidebar() {
                           isActive(item.href, item.exact)
                             ? "bg-primary text-primary-foreground"
                             : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                          isCollapsed && "md:justify-center",
                         )}
                         onClick={() => {
                           // Fechar o menu no mobile após clicar em um item
@@ -183,7 +190,7 @@ export function DashboardSidebar() {
                         }}
                       >
                         <item.icon className={cn("h-5 w-5 shrink-0")} />
-                        {(!isCollapsed || !isMounted) && <span className="md:flex">{item.title}</span>}
+                        {!isCollapsed && <span>{item.title}</span>}
                       </Link>
                     </TooltipTrigger>
                     {isCollapsed && <TooltipContent side="right">{item.title}</TooltipContent>}
@@ -212,7 +219,7 @@ export function DashboardSidebar() {
                       }}
                     >
                       <PlusCircle className="h-5 w-5 shrink-0" />
-                      {(!isCollapsed || !isMounted) && <span className="md:flex">Novo Evento</span>}
+                      {!isCollapsed && <span>Novo Evento</span>}
                     </Link>
                   </TooltipTrigger>
                   {isCollapsed && <TooltipContent side="right">Novo Evento</TooltipContent>}
@@ -237,7 +244,7 @@ export function DashboardSidebar() {
                       }}
                     >
                       <Home className="h-5 w-5 shrink-0" />
-                      {(!isCollapsed || !isMounted) && <span className="md:flex">Página Inicial</span>}
+                      {!isCollapsed && <span>Página Inicial</span>}
                     </Link>
                   </TooltipTrigger>
                   {isCollapsed && <TooltipContent side="right">Página Inicial</TooltipContent>}
@@ -248,12 +255,12 @@ export function DashboardSidebar() {
                     <button
                       onClick={handleLogout}
                       className={cn(
-                        "flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-                        isCollapsed && "md:justify-center w-full",
+                        "flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground w-full",
+                        isCollapsed && "md:justify-center",
                       )}
                     >
                       <LogOut className="h-5 w-5 shrink-0" />
-                      {(!isCollapsed || !isMounted) && <span className="md:flex">Sair</span>}
+                      {!isCollapsed && <span>Sair</span>}
                     </button>
                   </TooltipTrigger>
                   {isCollapsed && <TooltipContent side="right">Sair</TooltipContent>}
@@ -261,6 +268,7 @@ export function DashboardSidebar() {
               </div>
             </div>
           </div>
+        </aside>
       </TooltipProvider>
     </>
   )

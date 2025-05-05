@@ -1,81 +1,47 @@
 "use client"
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { useState } from "react"
+import { Bell, Menu, Ban } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { NotificationDropdown } from "@/components/dashboard/notification-dropdown"
-import { Search, Menu } from "lucide-react"
+import { UserNav } from "@/components/dashboard/user-nav"
 import { useSidebar } from "@/store/use-sidebar"
-import { useEffect, useState } from "react"
+import { useAdsSettings } from "@/store/use-ads-settings"
+import { AdsSettingsDialog } from "@/components/dashboard/ads-settings-dialog"
 
 export function DashboardHeader() {
-  const pathname = usePathname()
-  const { isCollapsed, onExpand, onCollapse } = useSidebar()
-  const [isMounted, setIsMounted] = useState(false)
-
-  // Garantir renderização do lado do cliente
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
-
-  // Função para obter o título da página com base no pathname
-  const getPageTitle = () => {
-    if (pathname === "/dashboard") return "Meus Eventos"
-    if (pathname.includes("/dashboard/presentes")) return "Listas de Presentes"
-    if (pathname.includes("/dashboard/convidados")) return "Convidados"
-    if (pathname.includes("/dashboard/estatisticas")) return "Estatísticas"
-    if (pathname.includes("/dashboard/configuracoes")) return "Configurações"
-    if (pathname.includes("/dashboard/notificacoes")) return "Notificações"
-    if (pathname.includes("/dashboard/eventos/novo")) return "Novo Evento"
-    return "Dashboard"
-  }
-
-  if (!isMounted) {
-    return (
-      <header className="sticky top-0 z-20 flex h-16 items-center border-b bg-background px-4 md:px-6">
-        <div className="flex flex-1 items-center gap-4">
-          <div className="w-full md:max-w-sm lg:max-w-md">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Pesquisar..."
-                className="w-full rounded-lg bg-background pl-8 md:w-[300px] lg:w-[400px]"
-              />
-            </div>
-          </div>
-        </div>
-      </header>
-    )
-  }
+  const { onExpand } = useSidebar()
+  const { isPremium } = useAdsSettings()
+  const [isAdsDialogOpen, setIsAdsDialogOpen] = useState(false)
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center border-b bg-background px-4 md:px-6">
-      <Button variant="ghost" size="icon" className="mr-2 md:hidden" onClick={() => onExpand()}>
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
+      <Button variant="outline" size="icon" className="md:hidden" onClick={onExpand}>
         <Menu className="h-5 w-5" />
-        <span className="sr-only">Menu</span>
+        <span className="sr-only">Toggle Menu</span>
       </Button>
-      <div className="flex flex-1 items-center gap-4">
-        <div className="w-full md:max-w-sm lg:max-w-md">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Pesquisar..."
-              className="w-full rounded-lg bg-background pl-8 md:w-[300px] lg:w-[400px]"
-            />
-          </div>
-        </div>
-      </div>
+
+      <div className="flex-1">{/* Área vazia onde estava o título */}</div>
+
       <div className="flex items-center gap-2">
-        <NotificationDropdown />
-        <Link href="/dashboard/eventos/novo">
-          <Button size="sm" className="hidden md:flex">
-            Novo Evento
+        {!isPremium && (
+           <AdsSettingsDialog open={isAdsDialogOpen} onOpenChange={setIsAdsDialogOpen} />
+        )}
+
+        <NotificationDropdown>
+          <Button variant="outline" size="icon" className="relative h-9 w-9">
+            <Bell className="h-4 w-4" />
+            <span className="sr-only">Notificações</span>
+            <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+              3
+            </span>
           </Button>
-        </Link>
+        </NotificationDropdown>
+
+        <UserNav />
       </div>
+
+     
     </header>
   )
 }

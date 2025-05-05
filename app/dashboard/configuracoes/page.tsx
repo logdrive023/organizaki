@@ -17,6 +17,9 @@ import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { DashboardAd } from "@/components/dashboard/dashboard-ad"
+import { useAdsSettings } from "@/store/use-ads-settings"
+import { FullscreenIcon as AdFreeIcon } from "lucide-react"
 
 const profileFormSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres" }),
@@ -40,6 +43,9 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("perfil")
   const [isSaving, setIsSaving] = useState(false)
   const [successMessage, setSuccessMessage] = useState("")
+  const { showAds, isPremium, toggleAds, setPremium } = useAdsSettings()
+  const [isAdsDialogOpen, setIsAdsDialogOpen] = useState(false)
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false)
 
   const profileForm = useForm<z.infer<typeof profileFormSchema>>({
     resolver: zodResolver(profileFormSchema),
@@ -95,6 +101,22 @@ export default function SettingsPage() {
     }, 1000)
   }
 
+  const handlePremiumPayment = () => {
+    setIsProcessingPayment(true)
+
+    // Simulando processamento de pagamento
+    setTimeout(() => {
+      setIsProcessingPayment(false)
+      setPremium(true)
+      setSuccessMessage("Parabéns! Você agora é um usuário premium sem anúncios.")
+
+      // Limpar a mensagem após 3 segundos
+      setTimeout(() => {
+        setSuccessMessage("")
+      }, 3000)
+    }, 2000)
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -108,11 +130,15 @@ export default function SettingsPage() {
         </Alert>
       )}
 
+      {/* Anúncio no topo da página de configurações */}
+      <DashboardAd slot="settings-top" format="horizontal" />
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="perfil">Perfil</TabsTrigger>
           <TabsTrigger value="senha">Senha</TabsTrigger>
           <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
+          <TabsTrigger value="anuncios">Anúncios</TabsTrigger>
           <TabsTrigger value="conta">Conta</TabsTrigger>
         </TabsList>
 
@@ -357,6 +383,58 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
+        {/* Nova aba de Anúncios */}
+        <TabsContent value="anuncios" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Configurações de Anúncios</CardTitle>
+              <CardDescription>Gerencie como os anúncios são exibidos na plataforma.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {isPremium ? (
+                <div className="py-6 flex flex-col items-center justify-center space-y-4">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <AdFreeIcon className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-medium text-center">Você é um usuário premium!</h3>
+                  <p className="text-center text-muted-foreground">
+                    Todos os anúncios foram removidos da plataforma. Obrigado por apoiar nosso serviço.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <div className="font-medium">Exibir anúncios</div>
+                        <div className="text-sm text-muted-foreground">
+                          Controle a exibição de anúncios na plataforma
+                        </div>
+                      </div>
+                      <Switch checked={showAds} onCheckedChange={toggleAds} />
+                    </div>
+                    <Separator />
+                    <div className="rounded-lg border p-4 bg-muted/50">
+                      <div className="flex flex-col space-y-4">
+                        <div className="flex items-center space-x-2">
+                          <AdFreeIcon className="h-5 w-5 text-primary" />
+                          <h3 className="text-lg font-medium">Remova anúncios permanentemente</h3>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Por apenas R$ 10,00, você pode remover todos os anúncios da plataforma permanentemente.
+                        </p>
+                        <Button onClick={handlePremiumPayment} disabled={isProcessingPayment}>
+                          {isProcessingPayment ? "Processando..." : "Pagar R$ 10,00"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Conta */}
         <TabsContent value="conta" className="space-y-6">
           <Card>
@@ -452,6 +530,9 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Anúncio no final da página de configurações */}
+      <DashboardAd slot="settings-bottom" format="horizontal" />
     </div>
   )
 }

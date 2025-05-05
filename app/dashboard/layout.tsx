@@ -1,13 +1,18 @@
-import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar"
+import type React from "react"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
+import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar"
 
-export default function DashboardLayout({ children }) {
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <div className="flex min-h-screen bg-muted/30">
-      <DashboardSidebar />
-      <div className="flex flex-1 flex-col w-full md:pl-16 transition-all duration-300">
-        <DashboardHeader />
-        <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">{children}</main>
+    <div className="flex min-h-screen flex-col">
+      <DashboardHeader />
+      <div className="flex flex-1">
+        <DashboardSidebar />
+        <main className="flex-1 md:ml-16 p-6 pt-8">{children}</main>
       </div>
     </div>
   )

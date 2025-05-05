@@ -1,264 +1,185 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { PlusCircle, Gift, Filter } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PlusCircle, Search } from "lucide-react"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { mockGifts } from "@/lib/mock-data"
+import { DashboardAd } from "@/components/dashboard/dashboard-ad"
+import type { GiftType } from "@/lib/types"
 
-// Função auxiliar para formatar preço corretamente
-const formatPrice = (price: string | number): string => {
-  if (typeof price === "string") {
-    // Remove caracteres não numéricos, exceto ponto decimal
-    const numericPrice = price.replace(/[^0-9,.]/g, "")
+export default function GiftsPage() {
+  const [activeTab, setActiveTab] = useState("todos")
+  const [sortOrder, setSortOrder] = useState("recentes")
+  const [filteredGifts, setFilteredGifts] = useState<GiftType[]>(mockGifts)
 
-    // Substitui vírgula por ponto para garantir conversão correta
-    const normalizedPrice = numericPrice.replace(",", ".")
+  // Função para filtrar e ordenar presentes
+  useEffect(() => {
+    let result = [...mockGifts]
 
-    // Tenta converter para número
-    const priceNumber = Number.parseFloat(normalizedPrice)
-
-    // Verifica se é um número válido
-    if (!isNaN(priceNumber)) {
-      return priceNumber.toFixed(2).replace(".", ",")
+    // Aplicar filtro por status
+    if (activeTab === "reservados") {
+      result = result.filter((gift) => gift.reserved && gift.reserved > 0)
+    } else if (activeTab === "disponiveis") {
+      result = result.filter((gift) => !gift.reserved || gift.reserved === 0)
     }
 
-    // Se não conseguir converter, retorna o valor original formatado
-    return numericPrice || "0,00"
-  }
+    // Aplicar ordenação
+    if (sortOrder === "recentes") {
+      result.sort((a, b) => b.id.localeCompare(a.id))
+    } else if (sortOrder === "antigos") {
+      result.sort((a, b) => a.id.localeCompare(b.id))
+    } else if (sortOrder === "alfabetica") {
+      result.sort((a, b) => a.name.localeCompare(b.name))
+    } else if (sortOrder === "preco-alto") {
+      result.sort(
+        (a, b) =>
+          Number.parseFloat(b.price.replace("R$ ", "").replace(",", ".")) -
+          Number.parseFloat(a.price.replace("R$ ", "").replace(",", ".")),
+      )
+    } else if (sortOrder === "preco-baixo") {
+      result.sort(
+        (a, b) =>
+          Number.parseFloat(a.price.replace("R$ ", "").replace(",", ".")) -
+          Number.parseFloat(b.price.replace("R$ ", "").replace(",", ".")),
+      )
+    }
 
-  // Se já for número, apenas formata
-  return price.toFixed(2).replace(".", ",")
-}
+    setFilteredGifts(result)
+  }, [activeTab, sortOrder])
 
-export default function PresentesPage() {
+  // Contagem de presentes por status
+  const totalGifts = mockGifts.length
+  const reservedGifts = mockGifts.filter((gift) => gift.reserved && gift.reserved > 0).length
+  const availableGifts = mockGifts.filter((gift) => !gift.reserved || gift.reserved === 0).length
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Listas de Presentes</h1>
-        <Link href="/dashboard/presentes/novo">
-          <Button className="flex items-center gap-2">
-            <PlusCircle className="h-4 w-4" />
-            Adicionar Presente
-          </Button>
-        </Link>
+      {/* Header com ações */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Lista de Presentes</h1>
+          <p className="text-muted-foreground">Gerencie todos os presentes dos seus eventos.</p>
+        </div>
+        <Button asChild>
+          <Link href="/dashboard/presentes/novo">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Novo Presente
+          </Link>
+        </Button>
       </div>
 
-      <div className="space-y-4">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="relative w-full md:w-96">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input type="search" placeholder="Buscar presentes..." className="w-full pl-8" />
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Select defaultValue="all">
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Todos os eventos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os eventos</SelectItem>
-                <SelectItem value="wedding">Casamento</SelectItem>
-                <SelectItem value="baby">Chá de Bebê</SelectItem>
-                <SelectItem value="birthday">Aniversário</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select defaultValue="recent">
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Mais recentes" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="recent">Mais recentes</SelectItem>
-                <SelectItem value="price-high">Maior preço</SelectItem>
-                <SelectItem value="price-low">Menor preço</SelectItem>
-                <SelectItem value="name">Nome (A-Z)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+      {/* Anúncio no topo da página */}
+      <DashboardAd slot="gifts-top" format="horizontal" />
 
-        <Tabs defaultValue="all" className="w-full">
-          <TabsList className="mb-4 w-full max-w-md">
-            <TabsTrigger value="all" className="flex-1">
-              Todos ({mockGifts.length})
-            </TabsTrigger>
-            <TabsTrigger value="reserved" className="flex-1">
-              Reservados (3)
-            </TabsTrigger>
-            <TabsTrigger value="available" className="flex-1">
-              Disponíveis (4)
-            </TabsTrigger>
-            <TabsTrigger value="sold-out" className="flex-1">
-              Esgotados (2)
-            </TabsTrigger>
+      {/* Filtros e Tabs */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <Tabs defaultValue="todos" value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
+          <TabsList>
+            <TabsTrigger value="todos">Todos ({totalGifts})</TabsTrigger>
+            <TabsTrigger value="reservados">Reservados ({reservedGifts})</TabsTrigger>
+            <TabsTrigger value="disponiveis">Disponíveis ({availableGifts})</TabsTrigger>
           </TabsList>
+        </Tabs>
 
-          <TabsContent value="all" className="mt-0">
+        <div className="flex items-center gap-2">
+          <Select value={sortOrder} onValueChange={setSortOrder}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Ordenar por" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recentes">Mais recentes</SelectItem>
+              <SelectItem value="antigos">Mais antigos</SelectItem>
+              <SelectItem value="alfabetica">Ordem alfabética</SelectItem>
+              <SelectItem value="preco-alto">Maior preço</SelectItem>
+              <SelectItem value="preco-baixo">Menor preço</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button variant="outline" size="icon">
+            <Filter className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Lista de presentes */}
+      {filteredGifts.length > 0 ? (
+        <>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredGifts.slice(0, 3).map((gift) => (
+              <GiftCard key={gift.id} gift={gift} />
+            ))}
+          </div>
+
+          {/* Anúncio no meio da lista */}
+          <DashboardAd slot="gifts-middle" format="horizontal" />
+
+          {filteredGifts.length > 3 && (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {mockGifts.map((gift) => (
-                <div key={gift.id} className="overflow-hidden rounded-lg border bg-card">
-                  <div className="relative aspect-video overflow-hidden">
-                    <img
-                      src={gift.image || "/placeholder.svg"}
-                      alt={gift.name}
-                      className="h-full w-full object-cover transition-all hover:scale-105"
-                    />
-                    {gift.quantity === 0 && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-xl font-bold text-white">
-                        Esgotado
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-medium line-clamp-1">{gift.name}</h3>
-                        <p className="text-sm text-muted-foreground">{gift.event}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium">R$ {formatPrice(gift.price)}</p>
-                      </div>
-                    </div>
-                    <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{gift.description}</p>
-                    <div className="mt-4 flex items-center justify-between text-sm">
-                      <p>Quantidade: {gift.quantity}</p>
-                      <p>Reservados: {gift.reserved}</p>
-                    </div>
-                    <div className="mt-4 flex items-center gap-2">
-                      <Button variant="outline" className="flex-1">
-                        Ver Produto
-                      </Button>
-                      <Button className="flex-1">Editar</Button>
-                    </div>
-                  </div>
-                </div>
+              {filteredGifts.slice(3).map((gift) => (
+                <GiftCard key={gift.id} gift={gift} />
               ))}
             </div>
-          </TabsContent>
+          )}
 
-          <TabsContent value="reserved" className="mt-0">
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {mockGifts
-                .filter((gift) => gift.reserved > 0)
-                .map((gift) => (
-                  <div key={gift.id} className="overflow-hidden rounded-lg border bg-card">
-                    <div className="relative aspect-video overflow-hidden">
-                      <img
-                        src={gift.image || "/placeholder.svg"}
-                        alt={gift.name}
-                        className="h-full w-full object-cover transition-all hover:scale-105"
-                      />
-                    </div>
-                    <div className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-medium line-clamp-1">{gift.name}</h3>
-                          <p className="text-sm text-muted-foreground">{gift.event}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium">R$ {formatPrice(gift.price)}</p>
-                        </div>
-                      </div>
-                      <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{gift.description}</p>
-                      <div className="mt-4 flex items-center justify-between text-sm">
-                        <p>Quantidade: {gift.quantity}</p>
-                        <p>Reservados: {gift.reserved}</p>
-                      </div>
-                      <div className="mt-4 flex items-center gap-2">
-                        <Button variant="outline" className="flex-1">
-                          Ver Produto
-                        </Button>
-                        <Button className="flex-1">Editar</Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="available" className="mt-0">
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {mockGifts
-                .filter((gift) => gift.quantity > gift.reserved)
-                .map((gift) => (
-                  <div key={gift.id} className="overflow-hidden rounded-lg border bg-card">
-                    <div className="relative aspect-video overflow-hidden">
-                      <img
-                        src={gift.image || "/placeholder.svg"}
-                        alt={gift.name}
-                        className="h-full w-full object-cover transition-all hover:scale-105"
-                      />
-                    </div>
-                    <div className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-medium line-clamp-1">{gift.name}</h3>
-                          <p className="text-sm text-muted-foreground">{gift.event}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium">R$ {formatPrice(gift.price)}</p>
-                        </div>
-                      </div>
-                      <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{gift.description}</p>
-                      <div className="mt-4 flex items-center justify-between text-sm">
-                        <p>Quantidade: {gift.quantity}</p>
-                        <p>Reservados: {gift.reserved}</p>
-                      </div>
-                      <div className="mt-4 flex items-center gap-2">
-                        <Button variant="outline" className="flex-1">
-                          Ver Produto
-                        </Button>
-                        <Button className="flex-1">Editar</Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="sold-out" className="mt-0">
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {mockGifts
-                .filter((gift) => gift.quantity === 0)
-                .map((gift) => (
-                  <div key={gift.id} className="overflow-hidden rounded-lg border bg-card">
-                    <div className="relative aspect-video overflow-hidden">
-                      <img
-                        src={gift.image || "/placeholder.svg"}
-                        alt={gift.name}
-                        className="h-full w-full object-cover transition-all hover:scale-105"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-xl font-bold text-white">
-                        Esgotado
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-medium line-clamp-1">{gift.name}</h3>
-                          <p className="text-sm text-muted-foreground">{gift.event}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium">R$ {formatPrice(gift.price)}</p>
-                        </div>
-                      </div>
-                      <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{gift.description}</p>
-                      <div className="mt-4 flex items-center justify-between text-sm">
-                        <p>Quantidade: {gift.quantity}</p>
-                        <p>Reservados: {gift.reserved}</p>
-                      </div>
-                      <div className="mt-4 flex items-center gap-2">
-                        <Button variant="outline" className="flex-1">
-                          Ver Produto
-                        </Button>
-                        <Button className="flex-1">Editar</Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
+          {/* Anúncio no final da página */}
+          <DashboardAd slot="gifts-bottom" format="horizontal" />
+        </>
+      ) : (
+        <Card className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-muted">
+            <Gift className="h-10 w-10 text-muted-foreground" />
+          </div>
+          <h2 className="mt-6 text-xl font-semibold">Nenhum presente encontrado</h2>
+          <p className="mb-8 mt-2 text-sm text-muted-foreground">
+            {activeTab === "todos"
+              ? "Você ainda não adicionou nenhum presente. Comece adicionando seu primeiro presente agora."
+              : activeTab === "reservados"
+                ? "Você não possui presentes reservados."
+                : "Você não possui presentes disponíveis."}
+          </p>
+          <Button asChild>
+            <Link href="/dashboard/presentes/novo">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Adicionar meu primeiro presente
+            </Link>
+          </Button>
+        </Card>
+      )}
     </div>
+  )
+}
+
+function GiftCard({ gift }: { gift: GiftType }) {
+  return (
+    <Card className="overflow-hidden">
+      <div className="aspect-video w-full overflow-hidden">
+        <img
+          src={gift.image || "/placeholder.svg"}
+          alt={gift.name}
+          className="h-full w-full object-cover transition-transform hover:scale-105"
+        />
+      </div>
+      <CardHeader className="p-4">
+        <CardTitle className="line-clamp-1 text-lg">{gift.name}</CardTitle>
+        <CardDescription className="line-clamp-2">{gift.description || "Sem descrição"}</CardDescription>
+      </CardHeader>
+      <CardContent className="p-4 pt-0">
+        <div className="flex justify-between">
+          <span className="font-medium">{gift.price}</span>
+          <span className="text-sm text-muted-foreground">
+            {gift.reserved ? `${gift.reserved}/${gift.quantity} reservados` : "0 reservados"}
+          </span>
+        </div>
+      </CardContent>
+      <CardFooter className="p-4 pt-0">
+        <Button variant="outline" className="w-full" asChild>
+          <Link href={`/dashboard/presentes/${gift.id}`}>Ver detalhes</Link>
+        </Button>
+      </CardFooter>
+    </Card>
   )
 }

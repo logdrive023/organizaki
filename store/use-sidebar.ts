@@ -11,7 +11,7 @@ interface SidebarState {
 export const useSidebar = create<SidebarState>()(
   persist(
     (set) => ({
-      isCollapsed: true, // Começa colapsado no mobile
+      isCollapsed: true,
       onExpand: () => set({ isCollapsed: false }),
       onCollapse: () => set({ isCollapsed: true }),
       toggle: () => set((state) => ({ isCollapsed: !state.isCollapsed })),

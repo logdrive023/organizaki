@@ -19,6 +19,8 @@ import { ptBR } from "date-fns/locale"
 import { ImageUpload } from "@/components/dashboard/image-upload"
 import { Card, CardContent } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
+import { DashboardAd } from "@/components/dashboard/dashboard-ad"
+import { useAdsSettings } from "@/store/use-ads-settings"
 
 const formSchema = z.object({
   title: z.string().min(2, { message: "O título deve ter pelo menos 2 caracteres" }),
@@ -36,6 +38,7 @@ export default function NewEventPage() {
   const [coverImage, setCoverImage] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
+  const { showAds } = useAdsSettings()
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -69,16 +72,19 @@ export default function NewEventPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-5 w-5" />
+    <div className="max-w-3xl mx-auto space-y-6 pb-8">
+      <div className="flex items-center gap-2 border-b pb-4">
+        <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-8 w-8">
+          <ArrowLeft className="h-4 w-4" />
+          <span className="sr-only">Voltar</span>
         </Button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Criar Novo Evento</h1>
           <p className="text-muted-foreground">Preencha os dados para criar seu evento</p>
         </div>
       </div>
+
+      {showAds && <DashboardAd slot="new-event-top" format="horizontal" />}
 
       <Card>
         <CardContent className="pt-6">
@@ -167,7 +173,7 @@ export default function NewEventPage() {
                   control={form.control}
                   name="time"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                       <FormLabel>Horário</FormLabel>
                       <FormControl>
                         <div className="relative flex items-center">
@@ -224,6 +230,8 @@ export default function NewEventPage() {
                 </div>
               </div>
 
+              {showAds && <DashboardAd slot="new-event-middle" format="horizontal" />}
+
               <div className="flex justify-end gap-4">
                 <Button type="button" variant="outline" onClick={() => router.back()}>
                   Cancelar
@@ -243,6 +251,8 @@ export default function NewEventPage() {
           </Form>
         </CardContent>
       </Card>
+
+      {showAds && <DashboardAd slot="new-event-bottom" format="horizontal" />}
     </div>
   )
 }

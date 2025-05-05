@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { mockEvents } from "@/lib/mock-data"
 import { EventCard } from "@/components/dashboard/event-card"
+import { DashboardAd } from "@/components/dashboard/dashboard-ad"
 import type { EventType } from "@/lib/types"
 
 export default function DashboardPage() {
@@ -60,6 +61,9 @@ export default function DashboardPage() {
         </Button>
       </div>
 
+      {/* Anúncio no topo do dashboard */}
+      <DashboardAd slot="dashboard-top" format="horizontal" />
+
       {/* Filtros e Tabs */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Tabs defaultValue="todos" value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
@@ -90,11 +94,27 @@ export default function DashboardPage() {
 
       {/* Lista de eventos */}
       {filteredEvents.length > 0 ? (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredEvents.map((event) => (
-            <EventCard key={event.id} event={event} />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredEvents.slice(0, 3).map((event) => (
+              <EventCard key={event.id} event={event} />
+            ))}
+          </div>
+
+          {/* Anúncio no meio da lista de eventos */}
+          <DashboardAd slot="dashboard-middle" format="horizontal" />
+
+          {filteredEvents.length > 3 && (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredEvents.slice(3).map((event) => (
+                <EventCard key={event.id} event={event} />
+              ))}
+            </div>
+          )}
+
+          {/* Anúncio no final da página */}
+          <DashboardAd slot="dashboard-bottom" format="horizontal" />
+        </>
       ) : (
         <Card className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-muted">
