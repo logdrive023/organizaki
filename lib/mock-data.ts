@@ -44,6 +44,20 @@ export const mockEvents: EventType[] = [
     createdAt: "2025-03-05T16:40:00Z",
     updatedAt: "2025-03-07T10:10:00Z",
   },
+  {
+    id: "event-4",
+    title: "Chá de Bebê da Ana",
+    description:
+      "A família está crescendo! Venha celebrar a chegada da nossa princesinha Sophia em um chá de bebê cheio de amor e carinho.",
+    date: "05/07/2025",
+    time: "14:30",
+    location: "Residência da Família, Rua das Acácias, 789, Belo Horizonte",
+    coverImage: "/placeholder.svg?key=kszle",
+    status: "draft",
+    guestCount: 30,
+    createdAt: "2025-03-05T16:40:00Z",
+    updatedAt: "2025-03-07T10:10:00Z",
+  },
 ]
 
 // Dados de exemplo para presentes

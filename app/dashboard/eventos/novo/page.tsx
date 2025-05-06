@@ -19,8 +19,10 @@ import { ptBR } from "date-fns/locale"
 import { ImageUpload } from "@/components/dashboard/image-upload"
 import { Card, CardContent } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
-import { DashboardAd } from "@/components/dashboard/dashboard-ad"
-import { useAdsSettings } from "@/store/use-ads-settings"
+
+import { eventAPI } from "@/lib/api/event"
+import { NewEventRequest } from "@/lib/interface/event"
+
 
 const formSchema = z.object({
   title: z.string().min(2, { message: "O título deve ter pelo menos 2 caracteres" }),
@@ -28,47 +30,88 @@ const formSchema = z.object({
   date: z.date({ required_error: "A data é obrigatória" }),
   time: z.string().min(1, { message: "O horário é obrigatório" }),
   location: z.string().min(5, { message: "O local deve ter pelo menos 5 caracteres" }),
-  coverImage: z.string().optional(),
+  coverFile: z
+    .any()
+    .refine(v => v instanceof File, "Selecione uma imagem")
+    .optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
 
+
+export function converterImagemEmbase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+
+    reader.onload = () => {
+      const result = reader.result
+      if (typeof result === "string") {
+        resolve(result)
+      } else {
+        reject(new Error("Não foi possível converter o arquivo em string"))
+      }
+    }
+
+    reader.onerror = () => {
+      reader.abort()
+      reject(new Error("Erro ao ler o arquivo"))
+    }
+
+    reader.readAsDataURL(file)
+  })
+}
+
 export default function NewEventPage() {
   const router = useRouter()
-  const [coverImage, setCoverImage] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
-  const { showAds } = useAdsSettings()
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      time: "",
-      location: "",
-      coverImage: "",
-    },
+    defaultValues: { coverFile: undefined },
   })
 
-  function onSubmit(data: FormValues) {
+  async function onSubmit(data: FormValues) {
     setIsSubmitting(true)
 
-    // Simulando uma chamada de API
-    setTimeout(() => {
-      console.log("Evento criado:", { ...data, coverImage })
-      setIsSubmitting(false)
+
+    // Converte o File em base64
+    let coverImageBase64: string | undefined
+    if (data.coverFile) {
+      coverImageBase64 = await converterImagemEmbase64(data.coverFile)
+    }
+
+    // Constrói o payload
+    const payload: NewEventRequest = {
+      title: data.title,
+      description: data.description,
+      date: data.date.toISOString(),
+      time: data.time,
+      location: data.location,
+      coverImage: coverImageBase64
+    }
+
+    try {
+
+      await eventAPI.create(payload)
 
       toast({
         title: "Evento criado com sucesso!",
-        description: "Você será redirecionado para o dashboard.",
+        description: "Você será redirecionado em instantes.",
       })
 
-      // Redirecionar após 1 segundo
-      setTimeout(() => {
-        router.push("/dashboard")
-      }, 1000)
-    }, 1500)
+      // redireciona após 1s
+      setTimeout(() => router.push("/dashboard"), 1000)
+    } catch (err: any) {
+      console.error(err)
+      toast({
+        variant: "destructive",
+        title: "Falha ao criar evento",
+        description: err.message,
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -84,7 +127,6 @@ export default function NewEventPage() {
         </div>
       </div>
 
-      {showAds && <DashboardAd slot="new-event-top" format="horizontal" />}
 
       <Card>
         <CardContent className="pt-6">
@@ -94,16 +136,15 @@ export default function NewEventPage() {
                 <div className="md:col-span-2">
                   <FormField
                     control={form.control}
-                    name="coverImage"
+                    name="coverFile"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Imagem de Capa</FormLabel>
                         <FormControl>
                           <ImageUpload
-                            value={coverImage}
-                            onChange={(url) => {
-                              setCoverImage(url)
-                              field.onChange(url)
+                            value={field.value} 
+                            onChange={(file) => {
+                              field.onChange(file)        
                             }}
                           />
                         </FormControl>
@@ -157,6 +198,7 @@ export default function NewEventPage() {
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
+                            locale={ptBR}
                             selected={field.value}
                             onSelect={field.onChange}
                             disabled={(date) => date < new Date()}
@@ -230,7 +272,6 @@ export default function NewEventPage() {
                 </div>
               </div>
 
-              {showAds && <DashboardAd slot="new-event-middle" format="horizontal" />}
 
               <div className="flex justify-end gap-4">
                 <Button type="button" variant="outline" onClick={() => router.back()}>
@@ -252,7 +293,6 @@ export default function NewEventPage() {
         </CardContent>
       </Card>
 
-      {showAds && <DashboardAd slot="new-event-bottom" format="horizontal" />}
     </div>
   )
 }

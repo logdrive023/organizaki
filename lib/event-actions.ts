@@ -23,7 +23,7 @@ export async function createEvent(eventData: Partial<EventType>) {
       : new Date().toLocaleDateString("pt-BR"),
     time: eventData.time || "00:00",
     location: eventData.location || "",
-    coverImage: eventData.coverImage || "/placeholder.svg?height=400&width=800&query=event",
+    coverFile: eventData.coverFile || "/placeholder.svg?height=400&width=800&query=event",
     status: "draft",
     guestCount: 0,
     createdAt: new Date().toISOString(),
@@ -35,14 +35,33 @@ export async function createEvent(eventData: Partial<EventType>) {
   return id
 }
 
+// Atualizar a função updateEvent para retornar mais informações
 export async function updateEvent(eventId: string, eventData: Partial<EventType>) {
   // Em uma aplicação real, atualizaríamos no banco de dados
 
   // Simulando um atraso de rede
   await new Promise((resolve) => setTimeout(resolve, 1000))
 
-  // Em uma aplicação real, retornaríamos o evento atualizado
-  return { success: true }
+  // Buscar o evento atual (em uma aplicação real, isso viria do banco de dados)
+  const currentEvent = mockEvents.find((e) => e.id === eventId)
+
+  if (!currentEvent) {
+    throw new Error("Evento não encontrado")
+  }
+
+  // Atualizar os dados do evento
+  const updatedEvent = {
+    ...currentEvent,
+    ...eventData,
+    // Garantir que a data seja uma string no formato correto
+    date:
+      eventData.date instanceof Date ? eventData.date.toLocaleDateString("pt-BR") : eventData.date || currentEvent.date,
+    updatedAt: new Date().toISOString(),
+  }
+
+  // Em uma aplicação real, salvaríamos no banco de dados
+  // Aqui, apenas simulamos o sucesso da operação
+  return { success: true, event: updatedEvent }
 }
 
 export async function getEvent(eventId: string) {

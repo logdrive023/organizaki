@@ -5,7 +5,7 @@ export interface EventType {
   date: string
   time: string
   location: string
-  coverImage: string
+  coverFile: string
   status: "active" | "draft"
   guestCount: number
   createdAt: string
