@@ -7,7 +7,7 @@ export function Footer() {
       <div className="container py-10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-3">
-            <h3 className="text-lg font-semibold">EventoFácil</h3>
+            <h3 className="text-lg font-semibold">Organizaki</h3>
             <p className="text-sm text-muted-foreground">
               Crie e gerencie seus eventos com facilidade. Listas de presentes, confirmações e muito mais.
             </p>
@@ -111,29 +111,10 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="border-t mt-10 pt-6 flex flex-col md:flex-row justify-between items-center">
+        <div className="border-t mt-10 pt-6 flex flex-col md:flex-row justify-center items-center">
           <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} EventoFácil. Todos os direitos reservados.
+            &copy; {new Date().getFullYear()} Organizaki. Todos os direitos reservados.
           </p>
-          <div className="mt-4 md:mt-0">
-            <ul className="flex space-x-6 text-sm">
-              <li>
-                <Link href="/termos-de-uso" className="text-muted-foreground hover:text-foreground">
-                  Termos
-                </Link>
-              </li>
-              <li>
-                <Link href="/politica-de-privacidade" className="text-muted-foreground hover:text-foreground">
-                  Privacidade
-                </Link>
-              </li>
-              <li>
-                <Link href="/politica-de-cookies" className="text-muted-foreground hover:text-foreground">
-                  Cookies
-                </Link>
-              </li>
-            </ul>
-          </div>
         </div>
       </div>
     </footer>
