@@ -2,33 +2,62 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { PlusCircle, Calendar, Filter } from "lucide-react"
+import { PlusCircle, Calendar,  Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { mockEvents } from "@/lib/mock-data"
 import { EventCard } from "@/components/dashboard/event-card"
 import { DashboardAd } from "@/components/dashboard/dashboard-ad"
-import type { EventType } from "@/lib/types"
+import { eventAPI } from "@/lib/api/event"
+import { toast } from "@/components/ui/use-toast"
+import type { EventType } from "@/lib/interface/event"
+
+// Excluir
+import { mockEvents } from "@/lib/mock-data"
 
 export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState("todos")
-  const [sortOrder, setSortOrder] = useState("recentes")
-  const [filteredEvents, setFilteredEvents] = useState<EventType[]>(mockEvents)
+  //const [events, setEvents] = useState<EventType[]>([])
+  const [events, setEvents]  = useState<EventType[]>(mockEvents)
+  const [filteredEvents, setFilteredEvents] = useState<EventType[]>([])
+  const [activeTab, setActiveTab] = useState<"todos" | "ativos" | "rascunhos">("todos")
+  const [sortOrder, setSortOrder] = useState<"recentes" | "antigos" | "alfabetica">("recentes")
+  const [loading, setLoading] = useState<boolean>(true)
 
   // Função para filtrar e ordenar eventos
-  useEffect(() => {
-    let result = [...mockEvents]
 
-    // Aplicar filtro por status
+
+  // 1) Fetch inicial de events
+  useEffect(() => {
+    setLoading(true)
+    eventAPI.list()
+      .then((data) => {
+        setEvents(data)
+      })
+      .catch((err) => {
+        toast({
+          variant: "destructive",
+          title: "Erro ao carregar eventos",
+          description: err.message || "Tente novamente mais tarde.",
+        })
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [])
+
+  // 2) Filtra e ordena sempre que mudar events, activeTab ou sortOrder
+  useEffect(() => {
+    let result = [...events]
+
+    // Filtrar por aba
     if (activeTab === "ativos") {
-      result = result.filter((event) => event.status === "active")
+      result = result.filter((e) => e.status === "active")
     } else if (activeTab === "rascunhos") {
-      result = result.filter((event) => event.status === "draft")
+      result = result.filter((e) => e.status === "draft")
     }
 
-    // Aplicar ordenação
+    // Ordenação
     if (sortOrder === "recentes") {
       result.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     } else if (sortOrder === "antigos") {
@@ -38,12 +67,13 @@ export default function DashboardPage() {
     }
 
     setFilteredEvents(result)
-  }, [activeTab, sortOrder])
+  }, [events, activeTab, sortOrder])
+
 
   // Contagem de eventos por status
-  const totalEvents = mockEvents.length
-  const activeEvents = mockEvents.filter((event) => event.status === "active").length
-  const draftEvents = mockEvents.filter((event) => event.status === "draft").length
+  const totalEvents = events?.length ?? 0
+  const activeEvents = events?.filter((e) => e.status === "active")?.length ?? 0
+  const draftEvents = events?.filter((e) => e.status === "draft")?.length ?? 0
 
   return (
     <div className="space-y-6">
@@ -85,15 +115,16 @@ export default function DashboardPage() {
               <SelectItem value="alfabetica">Ordem alfabética</SelectItem>
             </SelectContent>
           </Select>
-
-          <Button variant="outline" size="icon">
-            <Filter className="h-4 w-4" />
-          </Button>
         </div>
       </div>
 
       {/* Lista de eventos */}
-      {filteredEvents.length > 0 ? (
+      {loading ? (
+        <Card className="p-8 text-center">
+          <Loader2 className="animate-spin h-6 w-6 mx-auto mb-2" />
+          Carregando eventos...
+        </Card>
+      ) : filteredEvents.length > 0 ? (
         <>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filteredEvents.slice(0, 3).map((event) => (

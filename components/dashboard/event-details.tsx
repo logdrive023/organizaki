@@ -1,33 +1,96 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
-import { Calendar, Clock, MapPin, Edit2 } from "lucide-react"
+import { Calendar, Clock, MapPin, Edit2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import type { EventType } from "@/lib/types"
-import { updateEvent } from "@/lib/event-actions"
+import { toast } from "@/components/ui/use-toast"
+import { eventAPI } from "@/lib/api/event"
+import type { EventType, UpdateEventRequest } from "@/lib/interface/event"
+
 
 interface EventDetailsProps {
-  event: EventType
+  eventId: string
 }
 
-export function EventDetails({ event }: EventDetailsProps) {
-  const [isEditing, setIsEditing] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+export function EventDetails({ eventId }: EventDetailsProps) {
+  const [event, setEvent] = useState<EventType | null>(null)
+  const [loading, setLoading] = useState<boolean>(true)
+  const [isEditing, setIsEditing] = useState<boolean>(false)
+  const [isSaving, setIsSaving] = useState<boolean>(false)
+
+
+  useEffect(() => {
+    setLoading(true)
+    eventAPI
+      .getEventDetailsById(eventId)
+      .then((data) => setEvent(data))
+      .catch((err) =>
+        toast({
+          variant: "destructive",
+          title: "Erro ao carregar detalhes",
+          description: err.message || "Tente novamente mais tarde.",
+        })
+      )
+      .finally(() => setLoading(false))
+  }, [eventId])
+
 
   const handleSave = async () => {
-    setIsLoading(true)
-    try {
-      // Em uma aplicação real, salvaríamos as alterações no banco de dados
-      await updateEvent(event.id, event)
-      setIsEditing(false)
-    } catch (error) {
-      console.error("Erro ao atualizar evento:", error)
-    } finally {
-      setIsLoading(false)
+    if (!event) return
+    setIsSaving(true)
+
+    
+    const payload: UpdateEventRequest = {
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      date: event.date,
+      time: event.time,
+      location: event.location,
+      coverImage: event.coverImage,
     }
+
+    try {
+      const updated = await eventAPI.update(payload)
+      setEvent(updated)
+      setIsEditing(false)
+      toast({ title: "Evento atualizado com sucesso!" })
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar evento",
+        description: err.message || "Tente novamente mais tarde.",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <Card className="p-8 text-center">
+        <Loader2 className="animate-spin h-6 w-6 mx-auto mb-2" />
+        Carregando detalhes do evento...
+      </Card>
+    )
+  }
+
+  if (!event) {
+    return (
+      <Card className="p-8 text-center">
+        <h2 className="text-xl font-semibold">Evento não encontrado</h2>
+        <p className="text-muted-foreground">Verifique o ID e tente novamente.</p>
+      </Card>
+    )
   }
 
   return (
@@ -124,8 +187,8 @@ export function EventDetails({ event }: EventDetailsProps) {
           <Button variant="outline" onClick={() => setIsEditing(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={isLoading}>
-            {isLoading ? "Salvando..." : "Salvar Alterações"}
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? "Salvando..." : "Salvar Alterações"}
           </Button>
         </div>
       )}

@@ -1,9 +1,29 @@
 "use client"
 
-import { useState } from "react"
-import { PlusCircle, Mail, Copy, CheckCircle, XCircle, HelpCircle, Users } from "lucide-react"
+import { useState, useEffect } from "react"
+import Image from "next/image"
+import {
+  PlusCircle,
+  ExternalLink,
+  Trash2,
+  Gift,
+  Loader2,
+  Mail,
+  Copy,
+  CheckCircle,
+  XCircle,
+  HelpCircle,
+  Users,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -18,68 +38,102 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { mockGuests } from "@/lib/mock-data"
-import type { GuestType } from "@/lib/types"
-import { addGuest, removeGuest, sendInvites } from "@/lib/guest-actions"
+import { toast } from "@/components/ui/use-toast"
+import { eventAPI } from "@/lib/api/event"
+import type { GuestType, NewGuestRequest } from "@/lib/interface/event"
 
 interface GuestListProps {
   eventId: string
 }
 
 export function GuestList({ eventId }: GuestListProps) {
-  const [guests, setGuests] = useState<GuestType[]>(mockGuests)
+  const [guests, setGuests] = useState<GuestType[]>([])
+  const [loadingList, setLoadingList] = useState(true)
   const [isAddingGuest, setIsAddingGuest] = useState(false)
-  const [isSendingInvites, setIsSendingInvites] = useState(false)
+  const [bulkEmails, setBulkEmails] = useState("")
   const [newGuest, setNewGuest] = useState<Partial<GuestType>>({
     name: "",
     email: "",
     phone: "",
     status: "pending",
   })
-  const [bulkEmails, setBulkEmails] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isSendingInvites, setIsSendingInvites] = useState(false)
+
+  useEffect(() => {
+    setLoadingList(true)
+    eventAPI
+      .getEventGuestListById(eventId)
+      .then((data) => {
+        setGuests(data ?? [])
+      })
+      .catch((err) =>
+        toast({
+          variant: "destructive",
+          title: "Erro ao carregar convidados",
+          description: err.message || "Tente novamente mais tarde.",
+        })
+      )
+      .finally(() => setLoadingList(false))
+  }, [eventId])
 
   const handleAddGuest = async () => {
     if (!newGuest.name || !newGuest.email) return
-
     setIsLoading(true)
+
+    const payload: NewGuestRequest = {
+      eventId,                // vindo da prop
+      name: newGuest.name!,
+      email: newGuest.email!,
+      phone: newGuest.phone,
+      status: "pending",      // valor fixo ou de estado
+    }
+
     try {
-      const guest = await addGuest(eventId, newGuest as GuestType)
-      setGuests([...guests, guest])
-      setNewGuest({
-        name: "",
-        email: "",
-        phone: "",
-        status: "pending",
-      })
+      const guest = await eventAPI.addGuest(payload)
+      setGuests((prev) => [...prev, guest])
+      setNewGuest({ name: "", email: "", phone: "", status: "pending" })
       setIsAddingGuest(false)
-    } catch (error) {
-      console.error("Erro ao adicionar convidado:", error)
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao adicionar convidado",
+        description: err.message || "Tente novamente mais tarde.",
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleRemoveGuest = async (guestId: string) => {
+    setIsLoading(true)
     try {
-      await removeGuest(eventId, guestId)
-      setGuests(guests.filter((guest) => guest.id !== guestId))
-    } catch (error) {
-      console.error("Erro ao remover convidado:", error)
+      await eventAPI.removeGuest(eventId, guestId)
+      setGuests((prev) => prev.filter((g) => g.id !== guestId))
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao remover convidado",
+        description: err.message || "Tente novamente mais tarde.",
+      })
+    } finally {
+      setIsLoading(false)
     }
   }
 
   const handleSendInvites = async () => {
     setIsLoading(true)
     try {
-      await sendInvites(
-        eventId,
-        guests.filter((g) => g.status === "pending").map((g) => g.id),
-      )
+      const pendingIds = guests.filter((g) => g.status === "pending").map((g) => g.id)
+      await eventAPI.sendInvites(eventId, pendingIds)
       setIsSendingInvites(false)
-      // Em uma aplicação real, atualizaríamos o status dos convidados
-    } catch (error) {
-      console.error("Erro ao enviar convites:", error)
+      toast({ title: "Convites enviados com sucesso!" })
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao enviar convites",
+        description: err.message || "Tente novamente mais tarde.",
+      })
     } finally {
       setIsLoading(false)
     }
@@ -87,48 +141,37 @@ export function GuestList({ eventId }: GuestListProps) {
 
   const handleBulkAdd = async () => {
     if (!bulkEmails) return
-
     setIsLoading(true)
     try {
       const entries = bulkEmails
-        .split(/[\n,;]/)
+        .split(/[\n,;]+/)
         .map((e) => e.trim())
         .filter(Boolean)
-      const newGuests = []
-
+      const newGuests: GuestType[] = []
       for (const entry of entries) {
-        // Verifica se a entrada contém informações separadas por vírgula
-        const parts = entry.split(",").map((part) => part.trim())
-
-        let name, email, phone
-
-        if (parts.length >= 2) {
-          // Formato: Nome, Email, Telefone (opcional)
-          name = parts[0]
-          email = parts[1]
-          phone = parts[2] || "" // Telefone é opcional
-        } else {
-          // Apenas email foi fornecido
-          name = entry.split("@")[0] // Nome básico a partir do email
-          email = entry
-          phone = ""
-        }
-
-        const guest = await addGuest(eventId, {
+        const parts = entry.split(",").map((p) => p.trim())
+        const name = parts.length > 1 ? parts[0] : entry.split("@")[0]
+        const email = parts.length > 1 ? parts[1] : entry
+        const phone = parts[2] || ""
+        const payload: NewGuestRequest = {
+          eventId,
           name,
           email,
           phone,
           status: "pending",
-        })
-
+        }
+        const guest = await eventAPI.addGuest(payload)
         newGuests.push(guest)
       }
-
-      setGuests([...guests, ...newGuests])
+      setGuests((prev) => [...prev, ...newGuests])
       setBulkEmails("")
       setIsAddingGuest(false)
-    } catch (error) {
-      console.error("Erro ao adicionar convidados em massa:", error)
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao adicionar convidados em massa",
+        description: err.message || "Tente novamente mais tarde.",
+      })
     } finally {
       setIsLoading(false)
     }
@@ -156,6 +199,15 @@ export function GuestList({ eventId }: GuestListProps) {
     }
   }
 
+  if (loadingList) {
+    return (
+      <Card className="p-8 text-center">
+        <Loader2 className="animate-spin h-6 w-6 mx-auto mb-2" />
+        Carregando convidados...
+      </Card>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -171,17 +223,12 @@ export function GuestList({ eventId }: GuestListProps) {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Enviar Convites</DialogTitle>
-                <DialogDescription>Envie convites para todos os convidados pendentes</DialogDescription>
-              </DialogHeader>
-              <div className="py-4">
-                <p>
+                <DialogDescription>
                   Você está prestes a enviar convites para{" "}
-                  <strong>{guests.filter((g) => g.status === "pending").length}</strong> convidados pendentes.
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Cada convidado receberá um e-mail com um link único para confirmar presença.
-                </p>
-              </div>
+                  <strong>{guests.filter((g) => g.status === "pending").length}</strong> convidados
+                  pendentes.
+                </DialogDescription>
+              </DialogHeader>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsSendingInvites(false)}>
                   Cancelar
@@ -210,9 +257,8 @@ export function GuestList({ eventId }: GuestListProps) {
                   <Label htmlFor="name">Nome</Label>
                   <Input
                     id="name"
-                    value={newGuest.name}
+                    value={newGuest.name ?? ""}
                     onChange={(e) => setNewGuest({ ...newGuest, name: e.target.value })}
-                    placeholder="Ex: João Silva"
                   />
                 </div>
                 <div className="grid gap-2">
@@ -220,9 +266,8 @@ export function GuestList({ eventId }: GuestListProps) {
                   <Input
                     id="email"
                     type="email"
-                    value={newGuest.email}
+                    value={newGuest.email ?? ""}
                     onChange={(e) => setNewGuest({ ...newGuest, email: e.target.value })}
-                    placeholder="Ex: joao@exemplo.com"
                   />
                 </div>
                 <div className="grid gap-2">
@@ -230,21 +275,21 @@ export function GuestList({ eventId }: GuestListProps) {
                   <Input
                     id="phone"
                     type="tel"
-                    value={newGuest.phone}
+                    value={newGuest.phone ?? ""}
                     onChange={(e) => setNewGuest({ ...newGuest, phone: e.target.value })}
-                    placeholder="Ex: (11) 98765-4321"
                   />
                 </div>
                 <div className="mt-4">
                   <Label>Adicionar Vários Convidados</Label>
                   <Textarea
                     className="mt-2"
-                    placeholder="Adicione vários e-mails separados por vírgula, ponto e vírgula ou quebra de linha"
+                    placeholder="E-mails separados por vírgula, ponto e vírgula ou quebra de linha"
                     value={bulkEmails}
                     onChange={(e) => setBulkEmails(e.target.value)}
                   />
-                  <p className="mt-1 text-xs text-muted-foreground">Formato: Nome, E-mail, Telefone (opcional)</p>
-                  <p className="text-xs text-muted-foreground">Ex: João Silva, joao@exemplo.com, (11) 98765-4321</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Exemplo: João Silva, joao@exemplo.com, (11) 98765-4321; Maria Souza, maria@exemplo.com, (21) 91234-5678
+                  </p>
                 </div>
               </div>
               <DialogFooter>
@@ -256,7 +301,7 @@ export function GuestList({ eventId }: GuestListProps) {
                     {isLoading ? "Adicionando..." : "Adicionar em Massa"}
                   </Button>
                 ) : (
-                  <Button onClick={handleAddGuest} disabled={isLoading || !newGuest.name || !newGuest.email}>
+                  <Button onClick={handleAddGuest} disabled={isLoading}>
                     {isLoading ? "Adicionando..." : "Adicionar"}
                   </Button>
                 )}
@@ -269,16 +314,19 @@ export function GuestList({ eventId }: GuestListProps) {
       <Card>
         <CardHeader>
           <CardTitle>Link de Convite</CardTitle>
-          <CardDescription>Compartilhe este link para que as pessoas possam confirmar presença</CardDescription>
+          <CardDescription>
+            Compartilhe este link para que as pessoas possam confirmar presença
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2">
-            <div className="flex-1 rounded-md border p-3 text-sm">
-              {`${window.location.origin}/evento/${eventId}?convite=true`}
+            <div className="flex-1 rounded-md border p-3 text-sm break-all">
+              {guests[0]?.inviteUrl ?? ""}
             </div>
             <Button
               onClick={() => {
-                navigator.clipboard.writeText(`${window.location.origin}/evento/${eventId}?convite=true`)
+                const url = guests[0]?.inviteUrl ?? ""
+                navigator.clipboard.writeText(url)
               }}
             >
               <Copy className="mr-2 h-4 w-4" />
@@ -288,11 +336,12 @@ export function GuestList({ eventId }: GuestListProps) {
         </CardContent>
       </Card>
 
+
       {guests.length > 0 ? (
         <Card>
           <CardHeader>
             <CardTitle>Convidados ({guests.length})</CardTitle>
-            <CardDescription>Lista de todos os convidados e status de confirmação</CardDescription>
+            <CardDescription>Lista de todos os convidados e seus status</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -310,20 +359,15 @@ export function GuestList({ eventId }: GuestListProps) {
                   <TableRow key={guest.id}>
                     <TableCell className="font-medium">{guest.name}</TableCell>
                     <TableCell>{guest.email}</TableCell>
-                    <TableCell>{guest.phone || "-"}</TableCell>
+                    <TableCell>{guest.phone ?? "-"}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {getStatusIcon(guest.status)}
-                        {getStatusBadge(guest.status)}
+                        {getStatusIcon(guest.status ?? "")}
+                        {getStatusBadge(guest.status ?? "")}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive"
-                        onClick={() => handleRemoveGuest(guest.id)}
-                      >
+                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleRemoveGuest(guest.id)}>
                         Remover
                       </Button>
                     </TableCell>
@@ -338,7 +382,7 @@ export function GuestList({ eventId }: GuestListProps) {
           <Users className="h-12 w-12 text-muted-foreground" />
           <h3 className="mt-4 text-lg font-semibold">Nenhum convidado na lista</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            Adicione convidados à sua lista para enviar convites e acompanhar confirmações
+            Adicione convidados para enviar convites e gerenciar confirmações
           </p>
           <Button className="mt-4" onClick={() => setIsAddingGuest(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
