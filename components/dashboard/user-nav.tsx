@@ -28,28 +28,37 @@ export function UserNav() {
   })
 
   useEffect(() => {
-    // Tentar obter informações do usuário do cookie
-    const getUserInfo = () => {
+    async function loadUserInfo() {
       try {
-        const userInfoCookie = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("user-info="))
-          ?.split("=")[1]
+        let cookieValue: string | undefined
 
-        if (userInfoCookie) {
-          const decodedCookie = decodeURIComponent(userInfoCookie)
-          const parsedInfo = JSON.parse(decodedCookie)
+        // try the new cookieStore API if available
+        if (typeof window !== "undefined" && "cookieStore" in window) {
+          // @ts-ignore
+          const c = await window.cookieStore.get("user-info")
+          cookieValue = c?.value
+        } else {
+          // fallback to document.cookie
+          cookieValue = document.cookie
+            .split("; ")
+            .find((row) => row.startsWith("user-info="))
+            ?.split("=")[1]
+        }
+
+        if (cookieValue) {
+          const decoded = decodeURIComponent(cookieValue)
+          const parsed = JSON.parse(decoded) as Partial<UserInfo>
           setUserInfo({
-            name: parsedInfo.name || "Usuário Demo",
-            email: parsedInfo.email || "usuario@exemplo.com",
+            name: parsed.name || userInfo.name,
+            email: parsed.email || userInfo.email,
           })
         }
-      } catch (error) {
-        console.error("Erro ao obter informações do usuário:", error)
+      } catch (err) {
+        console.error("Erro ao obter informações do usuário:", err)
       }
     }
 
-    getUserInfo()
+    loadUserInfo()
   }, [])
 
   const handleLogout = async () => {
@@ -57,15 +66,13 @@ export function UserNav() {
     router.push("/")
   }
 
-  // Obter as iniciais do nome para o fallback do avatar
-  const getInitials = (name: string) => {
-    return name
+  const getInitials = (name: string) =>
+    name
       .split(" ")
-      .map((part) => part[0])
+      .map((n) => n[0])
       .join("")
       .toUpperCase()
       .substring(0, 2)
-  }
 
   return (
     <DropdownMenu>
@@ -86,8 +93,12 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => router.push("/dashboard")}>Meus Eventos</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push("/dashboard/configuracoes")}>Configurações</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/dashboard")}>
+            Meus Eventos
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/dashboard/configuracoes")}>
+            Configurações
+          </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>Sair</DropdownMenuItem>

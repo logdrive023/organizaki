@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Bell, Calendar, Gift, Users, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,123 +15,88 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
-import { useRouter } from "next/navigation"
+import { useToast } from "@/components/ui/use-toast"
+import { configuracaoAPI } from "@/lib/api/configuracao"
+import { NotificationDropDown } from "@/lib/interface/configuracao"
 
-// Tipo para as notificações
-interface Notification {
-  id: string
-  title: string
-  message: string
-  type: "event" | "gift" | "guest" | "system"
-  read: boolean
-  date: string
-  link?: string
-}
 
-// Dados de exemplo para notificações
-const mockNotifications: Notification[] = [
-  {
-    id: "notif-1",
-    title: "Novo convidado confirmado",
-    message: "Ana Oliveira confirmou presença no seu evento 'Casamento de João e Maria'",
-    type: "guest",
-    read: false,
-    date: "2025-05-04T14:30:00Z",
-    link: "/dashboard/convidados",
-  },
-  {
-    id: "notif-2",
-    title: "Presente reservado",
-    message: "O presente 'Jogo de Panelas Tramontina' foi reservado por Carlos Silva",
-    type: "gift",
-    read: false,
-    date: "2025-05-04T10:15:00Z",
-    link: "/dashboard/presentes",
-  },
-  {
-    id: "notif-3",
-    title: "Lembrete de evento",
-    message: "Seu evento 'Aniversário de 1 ano do Pedro' acontecerá em 7 dias",
-    type: "event",
-    read: true,
-    date: "2025-05-03T09:00:00Z",
-    link: "/dashboard/eventos/event-2",
-  },
-  {
-    id: "notif-4",
-    title: "Atualização do sistema",
-    message: "Novos recursos foram adicionados à plataforma. Confira as novidades!",
-    type: "system",
-    read: true,
-    date: "2025-05-02T16:45:00Z",
-  },
-  {
-    id: "notif-5",
-    title: "Convidado recusou",
-    message: "Roberto Santos recusou o convite para 'Casamento de João e Maria'",
-    type: "guest",
-    read: true,
-    date: "2025-05-01T11:20:00Z",
-    link: "/dashboard/convidados",
-  },
-]
 
 export function NotificationDropdown() {
   const router = useRouter()
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications)
+  const { toast } = useToast()
+  const [notifications, setNotifications] = useState<NotificationDropDown[]>([])
   const [isOpen, setIsOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
 
-  // Contagem de notificações não lidas
-  const unreadCount = notifications.filter((notif) => !notif.read).length
+  useEffect(() => {
+    setLoading(true)
+    configuracaoAPI
+      .listNotificationsDropDown()
+      .then((list) => setNotifications(list))
+      .catch((err) => {
+        toast({
+          variant: "destructive",
+          title: "Falha ao carregar notificações",
+          description: err.message || "Tente novamente mais tarde.",
+        })
+      })
+      .finally(() => setLoading(false))
+  }, [toast])
 
-  // Função para marcar uma notificação como lida
-  const markAsRead = (id: string) => {
-    setNotifications(notifications.map((notif) => (notif.id === id ? { ...notif, read: true } : notif)))
+  const unreadCount = notifications.filter((n) => !n.read).length
+
+  const markAsRead = async (id: string) => {
+    try {
+      await configuracaoAPI.markNotificationRead(id)
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      )
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao marcar como lida",
+        description: err.message || "Tente novamente mais tarde.",
+      })
+    }
   }
 
-  // Função para marcar todas as notificações como lidas
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((notif) => ({ ...notif, read: true })))
+  const markAllAsRead = async () => {
+    const toMark = notifications.filter((n) => !n.read).map((n) => n.id)
+    try {
+      await Promise.all(toMark.map((id) => configuracaoAPI.markNotificationRead(id)))
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao marcar todas como lidas",
+        description: err.message || "Tente novamente mais tarde.",
+      })
+    }
   }
 
-  // Função para lidar com o clique em uma notificação
-  const handleNotificationClick = (notification: Notification) => {
-    markAsRead(notification.id)
+  const handleNotificationClick = async (n: NotificationDropDown) => {
+    if (!n.read) await markAsRead(n.id)
     setIsOpen(false)
-
-    if (notification.link) {
-      router.push(notification.link)
-    }
+    if (n.link) router.push(n.link)
   }
 
-  // Função para obter o ícone com base no tipo de notificação
-  const getNotificationIcon = (type: string) => {
+
+  const getIcon = (type: NotificationDropDown["type"]) => {
     switch (type) {
-      case "event":
-        return <Calendar className="h-4 w-4 text-blue-500" />
-      case "gift":
-        return <Gift className="h-4 w-4 text-green-500" />
-      case "guest":
-        return <Users className="h-4 w-4 text-purple-500" />
-      default:
-        return <Info className="h-4 w-4 text-gray-500" />
+      case "event": return <Calendar className="h-4 w-4 text-blue-500" />
+      case "gift": return <Gift className="h-4 w-4 text-green-500" />
+      case "guest": return <Users className="h-4 w-4 text-purple-500" />
+      default: return <Info className="h-4 w-4 text-gray-500" />
     }
   }
 
-  // Função para formatar a data
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
-
-    if (diffInHours < 1) {
-      return "Agora mesmo"
-    } else if (diffInHours < 24) {
-      return `${diffInHours}h atrás`
-    } else {
-      const diffInDays = Math.floor(diffInHours / 24)
-      return `${diffInDays}d atrás`
-    }
+  const formatDate = (iso: string) => {
+    const d = new Date(iso)
+    const now = Date.now()
+    const diffH = Math.floor((now - d.getTime()) / 36e5)
+    if (diffH < 1) return "Agora mesmo"
+    if (diffH < 24) return `${diffH}h atrás`
+    return `${Math.floor(diffH / 24)}d atrás`
   }
 
   return (
@@ -139,61 +105,61 @@ export function NotificationDropdown() {
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <Badge className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary p-0 text-xs text-primary-foreground">
+            <Badge className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
               {unreadCount}
             </Badge>
           )}
           <span className="sr-only">Notificações</span>
         </Button>
       </DropdownMenuTrigger>
+
       <DropdownMenuContent className="w-80" align="end">
-        <DropdownMenuLabel className="flex items-center justify-between">
+        <DropdownMenuLabel className="flex items-center justify-between px-3 py-2">
           <span>Notificações</span>
           {unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-auto p-0 text-xs font-normal text-primary"
-              onClick={markAllAsRead}
-            >
+            <Button variant="ghost" size="sm" onClick={markAllAsRead} className="p-0 text-xs">
               Marcar todas como lidas
             </Button>
           )}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+
         <ScrollArea className="h-[300px]">
           <DropdownMenuGroup>
-            {notifications.length > 0 ? (
-              notifications.map((notification) => (
+            {loading ? (
+              <div className="p-4 text-center text-sm text-muted-foreground">
+                Carregando...
+              </div>
+            ) : notifications.length > 0 ? (
+              notifications.map((n) => (
                 <DropdownMenuItem
-                  key={notification.id}
-                  className={cn(
-                    "flex cursor-pointer flex-col items-start gap-1 p-3",
-                    !notification.read && "bg-muted/50",
-                  )}
-                  onClick={() => handleNotificationClick(notification)}
+                  key={n.id}
+                  className={`flex flex-col gap-1 p-3 ${!n.read ? "bg-muted/50" : ""}`}
+                  onClick={() => handleNotificationClick(n)}
                 >
-                  <div className="flex w-full items-start justify-between gap-2">
+                  <div className="flex justify-between items-start gap-2">
                     <div className="flex items-center gap-2">
-                      {getNotificationIcon(notification.type)}
-                      <span className="font-medium">{notification.title}</span>
+                      {getIcon(n.type)}
+                      <span className="font-medium">{n.title}</span>
                     </div>
-                    <span className="text-xs text-muted-foreground">{formatDate(notification.date)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDate(n.date)}
+                    </span>
                   </div>
-                  <p className="text-sm text-muted-foreground">{notification.message}</p>
+                  <p className="text-sm text-muted-foreground">{n.message}</p>
                 </DropdownMenuItem>
               ))
             ) : (
-              <div className="flex flex-col items-center justify-center p-4">
-                <Bell className="mb-2 h-8 w-8 text-muted-foreground" />
-                <p className="text-center text-sm text-muted-foreground">Você não tem notificações no momento</p>
+              <div className="p-4 text-center text-sm text-muted-foreground">
+                Você não tem notificações no momento
               </div>
             )}
           </DropdownMenuGroup>
         </ScrollArea>
+
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          className="justify-center text-center font-medium text-primary"
+          className="justify-center text-center text-primary font-medium"
           onClick={() => {
             setIsOpen(false)
             router.push("/dashboard/notificacoes")

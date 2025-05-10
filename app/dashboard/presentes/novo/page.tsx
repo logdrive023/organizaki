@@ -79,7 +79,7 @@ export default function NovoPresentePage() {
   // Carrega opções de evento dinamicamente
   useEffect(() => {
     eventAPI
-      .selectEvent()            // busca lista de eventos
+      .selectEvent()     
       .then((list) => setEventOptions(list))
       .catch((err) =>
         toast({

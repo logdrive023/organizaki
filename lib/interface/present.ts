@@ -21,3 +21,8 @@ export interface NewGiftRequest {
     url?: string
     quantity: number
 }
+
+export interface SelectPresent{ 
+    id: string
+    name: string
+}

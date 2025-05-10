@@ -1,6 +1,7 @@
 import {
-    GiftType,
-    NewGiftRequest
+  GiftType,
+  NewGiftRequest,
+  SelectPresent
 } from "@/lib/interface/present"
 
 // Dados mock iniciais
@@ -54,16 +55,32 @@ export const presentAPI = {
     })
   },
 
+  // Obter presentes
+  selectPresent: async (): Promise<SelectPresent[]> => {
+    // Pega toda a lista de eventos do backend
+    const events = await handleRequest<SelectPresent[]>(
+      `${API_BASE_URL}/present/select`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      }
+    )
+    // Mapeia para somente id e name
+    return events.map((e) => ({
+      id: e.id,
+      name: e.name,
+    }))
+  },
 
 }
 
 
 //
- // // Atualiza Evento
- // update: async (evento: UpdateEventRequest): Promise<EventType> => {
- //   return handleRequest<EventType>(`${API_BASE_URL}/update`, {
- //     method: "PUT",
- //     headers: { "Content-Type": "application/json" },
- //     body: JSON.stringify(evento),
- //   })
- // },
+// // Atualiza Evento
+// update: async (evento: UpdateEventRequest): Promise<EventType> => {
+//   return handleRequest<EventType>(`${API_BASE_URL}/update`, {
+//     method: "PUT",
+//     headers: { "Content-Type": "application/json" },
+//     body: JSON.stringify(evento),
+//   })
+// },

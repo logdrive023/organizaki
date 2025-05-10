@@ -193,4 +193,25 @@ export const mockGuests: GuestType[] = [
     status: "confirmed",
     eventId: "event-3",
   },
+  {
+    id: "guest-9",
+    name: "Patrícia Gomes",
+    email: "patricia.gomes@exemplo.com",
+    status: "confirmed",
+    eventId: "event-3",
+  },
+  {
+    id: "guest-10",
+    name: "Patrícia Gomes",
+    email: "patricia.gomes@exemplo.com",
+    status: "confirmed",
+    eventId: "event-3",
+  },
+  {
+    id: "guest-11",
+    name: "Patrícia Gomes",
+    email: "patricia.gomes@exemplo.com",
+    status: "confirmed",
+    eventId: "event-3",
+  },
 ]

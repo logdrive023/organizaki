@@ -1,7 +1,19 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Bell, Calendar, Gift, Users, Info, Check, Filter, Search, Trash2 } from "lucide-react"
+import {
+  Bell,
+  Calendar,
+  Gift,
+  Users,
+  Info,
+  Check,
+  Filter,
+  Search,
+  Trash2,
+  Loader2,
+  XCircle,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -17,204 +29,133 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { useToast } from "@/components/ui/use-toast"
 
-// Tipo para as notificações
-interface Notification {
-  id: string
-  title: string
-  message: string
-  type: "event" | "gift" | "guest" | "system"
-  read: boolean
-  date: string
-  link?: string
-}
-
-// Dados de exemplo para notificações
-const mockNotifications: Notification[] = [
-  {
-    id: "notif-1",
-    title: "Novo convidado confirmado",
-    message: "Ana Oliveira confirmou presença no seu evento 'Casamento de João e Maria'",
-    type: "guest",
-    read: false,
-    date: "2025-05-04T14:30:00Z",
-    link: "/dashboard/convidados",
-  },
-  {
-    id: "notif-2",
-    title: "Presente reservado",
-    message: "O presente 'Jogo de Panelas Tramontina' foi reservado por Carlos Silva",
-    type: "gift",
-    read: false,
-    date: "2025-05-04T10:15:00Z",
-    link: "/dashboard/presentes",
-  },
-  {
-    id: "notif-3",
-    title: "Lembrete de evento",
-    message: "Seu evento 'Aniversário de 1 ano do Pedro' acontecerá em 7 dias",
-    type: "event",
-    read: true,
-    date: "2025-05-03T09:00:00Z",
-    link: "/dashboard/eventos/event-2",
-  },
-  {
-    id: "notif-4",
-    title: "Atualização do sistema",
-    message: "Novos recursos foram adicionados à plataforma. Confira as novidades!",
-    type: "system",
-    read: true,
-    date: "2025-05-02T16:45:00Z",
-  },
-  {
-    id: "notif-5",
-    title: "Convidado recusou",
-    message: "Roberto Santos recusou o convite para 'Casamento de João e Maria'",
-    type: "guest",
-    read: true,
-    date: "2025-05-01T11:20:00Z",
-    link: "/dashboard/convidados",
-  },
-  {
-    id: "notif-6",
-    title: "Presente comprado",
-    message: "O presente 'Cafeteira Elétrica' foi marcado como comprado",
-    type: "gift",
-    read: true,
-    date: "2025-04-30T13:10:00Z",
-    link: "/dashboard/presentes",
-  },
-  {
-    id: "notif-7",
-    title: "Novo evento criado",
-    message: "Seu evento 'Chá de Bebê da Ana' foi criado com sucesso",
-    type: "event",
-    read: true,
-    date: "2025-04-29T09:45:00Z",
-    link: "/dashboard/eventos/event-3",
-  },
-  {
-    id: "notif-8",
-    title: "Manutenção programada",
-    message: "O sistema estará indisponível para manutenção no dia 10/05 das 02:00 às 04:00",
-    type: "system",
-    read: true,
-    date: "2025-04-28T17:30:00Z",
-  },
-  {
-    id: "notif-9",
-    title: "Convites enviados",
-    message: "Os convites para 'Casamento de João e Maria' foram enviados com sucesso",
-    type: "guest",
-    read: true,
-    date: "2025-04-27T14:20:00Z",
-    link: "/dashboard/convidados",
-  },
-  {
-    id: "notif-10",
-    title: "Lista de presentes atualizada",
-    message: "Novos itens foram adicionados à lista de presentes do evento 'Casamento de João e Maria'",
-    type: "gift",
-    read: true,
-    date: "2025-04-26T11:05:00Z",
-    link: "/dashboard/presentes",
-  },
-]
+import { notificationsAPI } from "@/lib/api/notification"  // implemente esta API
+import type { Notification } from "@/lib/interface/notification"             // seu tipo shared
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications)
-  const [activeTab, setActiveTab] = useState("todas")
+  const { toast } = useToast()
+
+  // estado principal
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // filtros/UI
+  const [activeTab, setActiveTab] = useState<"todas" | "naoLidas" | "lidas">("todas")
+  const [typeFilter, setTypeFilter] = useState<Notification["type"] | "todas">("todas")
   const [searchQuery, setSearchQuery] = useState("")
-  const [typeFilter, setTypeFilter] = useState("todas")
   const [currentPage, setCurrentPage] = useState(1)
-  const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>(notifications)
 
   const itemsPerPage = 5
 
-  // Função para filtrar notificações
+  // fetch inicial
   useEffect(() => {
-    let result = [...notifications]
+    setLoading(true)
+    notificationsAPI
+      .list()
+      .then((data: Notification[]) => {
+        setNotifications(data ?? [])
+      })
+      .catch((err: any) => {
+        const msg = err.message || "Erro ao carregar notificações"
+        setError(msg)
+        toast({ variant: "destructive", title: "Falha na requisição", description: msg })
+      })
+      .finally(() => setLoading(false))
+  }, [toast])
 
-    // Filtrar por status (lida/não lida)
-    if (activeTab === "naoLidas") {
-      result = result.filter((notif) => !notif.read)
-    } else if (activeTab === "lidas") {
-      result = result.filter((notif) => notif.read)
-    }
-
-    // Filtrar por tipo
-    if (typeFilter !== "todas") {
-      result = result.filter((notif) => notif.type === typeFilter)
-    }
-
-    // Filtrar por busca
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      result = result.filter(
-        (notif) => notif.title.toLowerCase().includes(query) || notif.message.toLowerCase().includes(query),
+  // filtra e ordena
+  const filteredNotifications = (notifications ?? [])
+    .filter((n) =>
+      activeTab === "naoLidas" ? !n.read
+        : activeTab === "lidas" ? n.read
+          : true
+    )
+    .filter((n) => (typeFilter === "todas" ? true : n.type === typeFilter))
+    .filter((n) => {
+      if (!searchQuery) return true
+      const q = searchQuery.toLowerCase()
+      return (
+        n.title.toLowerCase().includes(q) ||
+        n.message.toLowerCase().includes(q)
       )
-    }
+    })
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-    // Ordenar por data (mais recentes primeiro)
-    result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-
-    setFilteredNotifications(result)
-    setCurrentPage(1) // Resetar para a primeira página quando os filtros mudam
-  }, [activeTab, typeFilter, searchQuery, notifications])
-
-  // Calcular paginação
+  // paginação
   const totalPages = Math.ceil(filteredNotifications.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
   const paginatedNotifications = filteredNotifications.slice(startIndex, startIndex + itemsPerPage)
 
-  // Função para marcar uma notificação como lida
-  const markAsRead = (id: string) => {
-    setNotifications(notifications.map((notif) => (notif.id === id ? { ...notif, read: true } : notif)))
-  }
-
-  // Função para marcar todas as notificações como lidas
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((notif) => ({ ...notif, read: true })))
-  }
-
-  // Função para excluir uma notificação
-  const deleteNotification = (id: string) => {
-    setNotifications(notifications.filter((notif) => notif.id !== id))
-  }
-
-  // Função para excluir todas as notificações
-  const deleteAllNotifications = () => {
-    setNotifications([])
-  }
-
-  // Função para obter o ícone com base no tipo de notificação
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case "event":
-        return <Calendar className="h-5 w-5 text-blue-500" />
-      case "gift":
-        return <Gift className="h-5 w-5 text-green-500" />
-      case "guest":
-        return <Users className="h-5 w-5 text-purple-500" />
-      default:
-        return <Info className="h-5 w-5 text-gray-500" />
+  // handlers chamando API
+  const markAsRead = async (id: string) => {
+    try {
+      await notificationsAPI.markAsRead(id)
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      )
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Erro", description: err.message || "Tente novamente." })
     }
   }
 
-  // Função para formatar a data
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return new Intl.DateTimeFormat("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date)
+  const markAllAsRead = async () => {
+    try {
+      await notificationsAPI.markAllAsRead()
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Erro", description: err.message || "Tente novamente." })
+    }
+  }
+
+  const deleteNotification = async (id: string) => {
+    try {
+      await notificationsAPI.delete(id)
+      setNotifications((prev) => prev.filter((n) => n.id !== id))
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Erro", description: err.message || "Tente novamente." })
+    }
+  }
+
+  const deleteAllNotifications = async () => {
+    try {
+      await notificationsAPI.deleteAll()
+      setNotifications([])
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Erro", description: err.message || "Tente novamente." })
+    }
+  }
+
+  // ícone e formata data
+  const getNotificationIcon = (type: Notification["type"]) => {
+    switch (type) {
+      case "event": return <Calendar className="h-5 w-5 text-blue-500" />
+      case "gift": return <Gift className="h-5 w-5 text-green-500" />
+      case "guest": return <Users className="h-5 w-5 text-purple-500" />
+      default: return <Info className="h-5 w-5 text-gray-500" />
+    }
+  }
+  const formatDate = (d: string) =>
+    new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    }).format(new Date(d))
+
+  // loading / erro
+  if (loading) {
+    return (
+      <Card className="p-8 text-center">
+        <Loader2 className="animate-spin h-6 w-6 mx-auto mb-2" />
+        Carregando notificações...
+      </Card>
+    )
   }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Notificações</h1>
         <p className="text-muted-foreground">Gerencie todas as suas notificações em um só lugar.</p>
@@ -233,7 +174,12 @@ export default function NotificationsPage() {
         </div>
 
         <div className="flex gap-2">
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <Select
+            value={typeFilter}
+            onValueChange={(val: string) =>
+              setTypeFilter(val as "todas" | "event" | "gift" | "guest" | "system")
+            }
+          >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filtrar por tipo" />
             </SelectTrigger>
@@ -245,33 +191,32 @@ export default function NotificationsPage() {
               <SelectItem value="system">Sistema</SelectItem>
             </SelectContent>
           </Select>
-
-          <Button variant="outline" size="icon">
-            <Filter className="h-4 w-4" />
-          </Button>
         </div>
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="todas" value={activeTab} onValueChange={setActiveTab}>
+      <Tabs
+        defaultValue="todas"
+        value={activeTab}
+        onValueChange={(val: string) =>
+          setActiveTab(val as "todas" | "naoLidas" | "lidas")
+        }
+      >
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="todas">Todas</TabsTrigger>
             <TabsTrigger value="naoLidas">Não lidas</TabsTrigger>
             <TabsTrigger value="lidas">Lidas</TabsTrigger>
           </TabsList>
-
           <div className="flex gap-2">
-            {notifications.some((n) => !n.read) && (
+            {notifications.some(n => !n.read) && (
               <Button variant="outline" size="sm" onClick={markAllAsRead}>
-                <Check className="mr-2 h-4 w-4" />
-                Marcar todas como lidas
+                <Check className="mr-2 h-4 w-4" /> Marcar todas como lidas
               </Button>
             )}
             {notifications.length > 0 && (
               <Button variant="outline" size="sm" className="text-destructive" onClick={deleteAllNotifications}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Limpar tudo
+                <Trash2 className="mr-2 h-4 w-4" /> Limpar tudo
               </Button>
             )}
           </div>
@@ -281,43 +226,31 @@ export default function NotificationsPage() {
       {/* Lista de notificações */}
       {paginatedNotifications.length > 0 ? (
         <div className="space-y-4">
-          {paginatedNotifications.map((notification) => (
-            <Card key={notification.id} className={notification.read ? "" : "bg-muted/30"}>
+          {paginatedNotifications.map(n => (
+            <Card key={n.id} className={n.read ? "" : "bg-muted/30"}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-4">
                     <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                      {getNotificationIcon(notification.type)}
+                      {getNotificationIcon(n.type)}
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-medium">{notification.title}</h3>
-                        {!notification.read && <Badge className="bg-primary text-xs">Nova</Badge>}
+                        <h3 className="font-medium">{n.title}</h3>
+                        {!n.read && <Badge className="bg-primary text-xs">Nova</Badge>}
                       </div>
-                      <p className="text-sm text-muted-foreground">{notification.message}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(notification.date)}</p>
+                      <p className="text-sm text-muted-foreground">{n.message}</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(n.date)}</p>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    {!notification.read && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => markAsRead(notification.id)}
-                      >
-                        <Check className="h-4 w-4" />
-                        <span className="sr-only">Marcar como lida</span>
+                    {!n.read && (
+                      <Button variant="ghost" size="icon" onClick={() => markAsRead(n.id)}>
+                        <Check className="h-4 w-4" /><span className="sr-only">Marcar como lida</span>
                       </Button>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive"
-                      onClick={() => deleteNotification(notification.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Excluir</span>
+                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteNotification(n.id)}>
+                      <Trash2 className="h-4 w-4" /><span className="sr-only">Excluir</span>
                     </Button>
                   </div>
                 </div>
@@ -332,58 +265,41 @@ export default function NotificationsPage() {
                 <PaginationItem>
                   <PaginationPrevious
                     href="#"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      if (currentPage > 1) setCurrentPage(currentPage - 1)
-                    }}
+                    onClick={e => { e.preventDefault(); if (currentPage > 1) setCurrentPage(currentPage - 1) }}
                     className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                   />
                 </PaginationItem>
-
-                {Array.from({ length: totalPages }).map((_, index) => {
-                  const page = index + 1
-                  // Mostrar apenas páginas próximas à atual
+                {Array.from({ length: totalPages }).map((_, i) => {
+                  const page = i + 1
                   if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
                     return (
                       <PaginationItem key={page}>
                         <PaginationLink
                           href="#"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            setCurrentPage(page)
-                          }}
+                          onClick={e => { e.preventDefault(); setCurrentPage(page) }}
                           isActive={page === currentPage}
                         >
                           {page}
                         </PaginationLink>
                       </PaginationItem>
                     )
-                  } else if (
-                    (page === currentPage - 2 && currentPage > 3) ||
-                    (page === currentPage + 2 && currentPage < totalPages - 2)
-                  ) {
-                    return (
-                      <PaginationItem key={`ellipsis-${page}`}>
-                        <PaginationEllipsis />
-                      </PaginationItem>
-                    )
+                  }
+                  if ((page === currentPage - 2 && currentPage > 3) || (page === currentPage + 2 && currentPage < totalPages - 2)) {
+                    return <PaginationItem key={`el-${page}`}><PaginationEllipsis /></PaginationItem>
                   }
                   return null
                 })}
-
                 <PaginationItem>
                   <PaginationNext
                     href="#"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      if (currentPage < totalPages) setCurrentPage(currentPage + 1)
-                    }}
+                    onClick={e => { e.preventDefault(); if (currentPage < totalPages) setCurrentPage(currentPage + 1) }}
                     className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
                   />
                 </PaginationItem>
               </PaginationContent>
             </Pagination>
           )}
+
         </div>
       ) : (
         <Card className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">

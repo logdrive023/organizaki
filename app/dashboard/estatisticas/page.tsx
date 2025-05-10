@@ -1,63 +1,131 @@
 "use client"
 
-import { useState } from "react"
-import { Users, Gift, DollarSign, TrendingUp } from "lucide-react"
+import { useState, useEffect } from "react"
+import {
+  Users,
+  Gift,
+  DollarSign,
+  TrendingUp,
+  Loader2,
+  XCircle,
+} from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { mockEvents, mockGuests, mockGifts } from "@/lib/mock-data"
+import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/components/ui/use-toast"
+
+import { eventAPI } from "@/lib/api/event"
+import { presentAPI } from "@/lib/api/present"
+import type { EventType, GuestType } from "@/lib/interface/event"
+import type { GiftType } from "@/lib/types"
 
 export default function StatisticsPage() {
+  const { toast } = useToast()
+
+  // estados de dados
+  const [events, setEvents] = useState<EventType[]>([])
+  const [guests, setGuests] = useState<GuestType[]>([])
+  const [gifts, setGifts] = useState<GiftType[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // filtros de UI
   const [selectedEvent, setSelectedEvent] = useState("todos")
   const [timeRange, setTimeRange] = useState("todos")
-  const [activeTab, setActiveTab] = useState("resumo")
+  const [activeTab, setActiveTab] = useState<"resumo" | "convidados" | "presentes">("resumo")
 
-  // Filtrar dados com base no evento selecionado
-  const filteredGuests =
-    selectedEvent === "todos" ? mockGuests : mockGuests.filter((guest) => guest.eventId === selectedEvent)
+  // fetch inicial
+  useEffect(() => {
+    setLoading(true)
+    Promise.all([
+      eventAPI.list(),        // lista de eventos
+      eventAPI.selectGust(),  // lista de convidados
+      presentAPI.list(),      // lista de presentes
+    ])
+      .then(([evs, gsts, gfts]) => {
+        setEvents(evs ?? [])
+        setGuests(gsts ?? [])
+        setGifts(gfts ?? [])
+      })
+      .catch(err => {
+        const msg = err?.message ?? "Erro ao carregar dados"
+        setError(msg)
+        toast({
+          variant: "destructive",
+          title: "Falha na requisição",
+          description: msg,
+        })
+      })
+      .finally(() => setLoading(false))
+  }, [toast])
 
-  const filteredGifts =
-    selectedEvent === "todos" ? mockGifts : mockGifts.filter((gift) => gift.eventId === selectedEvent)
+  // loading / erro
+  if (loading) {
+    return (
+      <Card className="p-8 text-center">
+        <Loader2 className="animate-spin h-6 w-6 mx-auto mb-2" />
+        Carregando estatísticas...
+      </Card>
+    )
+  }
 
-  // Estatísticas de convidados
+  // use nullish coalescing para garantir array
+  const allGuests = guests ?? []
+  const allGifts = gifts ?? []
+
+  // filtrar por evento
+  const filteredGuests = selectedEvent === "todos"
+    ? allGuests
+    : allGuests.filter(g => g.eventId === selectedEvent)
+
+  const filteredGifts = selectedEvent === "todos"
+    ? allGifts
+    : allGifts.filter(g => g.eventId === selectedEvent)
+
+  // estatísticas de convidados
   const totalGuests = filteredGuests.length
-  const confirmedGuests = filteredGuests.filter((g) => g.status === "confirmed").length
-  const pendingGuests = filteredGuests.filter((g) => g.status === "pending").length
-  const declinedGuests = filteredGuests.filter((g) => g.status === "declined").length
+  const confirmedGuests = filteredGuests.filter(g => g.status === "confirmed").length
+  const pendingGuests = filteredGuests.filter(g => g.status === "pending").length
+  const declinedGuests = filteredGuests.filter(g => g.status === "declined").length
   const confirmationRate = totalGuests > 0 ? (confirmedGuests / totalGuests) * 100 : 0
 
-  // Estatísticas de presentes
+  // estatísticas de presentes
   const totalGifts = filteredGifts.length
-  const totalGiftItems = filteredGifts.reduce((acc, gift) => acc + gift.quantity, 0)
-  const reservedGifts = filteredGifts.reduce((acc, gift) => acc + (gift.reserved || 0), 0)
+  const totalGiftItems = filteredGifts.reduce((sum, g) => sum + (g.quantity ?? 0), 0)
+  const reservedGifts = filteredGifts.reduce((sum, g) => sum + (g.reserved ?? 0), 0)
   const giftCompletionRate = totalGiftItems > 0 ? (reservedGifts / totalGiftItems) * 100 : 0
 
-  // Valor estimado dos presentes
-  const estimatedValue = filteredGifts.reduce((acc, gift) => {
-    const price = Number.parseFloat(gift.price.replace(/[^\d,]/g, "").replace(",", "."))
-    return isNaN(price) ? acc : acc + price * gift.quantity
+  // valor estimado
+  const estimatedValue = filteredGifts.reduce((sum, g) => {
+    const price = parseFloat(
+      g.price
+        .replace(/[^\d,]/g, "")
+        .replace(",", ".")
+    )
+    return sum + (isNaN(price) ? 0 : price * (g.quantity ?? 0))
   }, 0)
 
-  // Presentes mais populares
-  const topGifts = [...filteredGifts].sort((a, b) => (b.reserved || 0) - (a.reserved || 0)).slice(0, 5)
+  // top presentes
+  const topGifts = [...filteredGifts]
+    .sort((a, b) => (b.reserved ?? 0) - (a.reserved ?? 0))
+    .slice(0, 5)
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Estatísticas</h1>
+        <h1 className="text-2xl font-bold">Estatísticas</h1>
         <p className="text-muted-foreground">Acompanhe o desempenho dos seus eventos.</p>
       </div>
 
       {/* Filtros */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <Select value={selectedEvent} onValueChange={setSelectedEvent}>
-          <SelectTrigger className="w-[250px]">
-            <SelectValue placeholder="Selecionar evento" />
-          </SelectTrigger>
+        <Select value={selectedEvent} onValueChange={val => setSelectedEvent(val ?? "todos")}>
+          <SelectTrigger className="w-[250px]"><SelectValue placeholder="Selecionar evento" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos os eventos</SelectItem>
-            {mockEvents.map((event) => (
+            {(events ?? []).map((event) => (
               <SelectItem key={event.id} value={event.id}>
                 {event.title}
               </SelectItem>
@@ -65,10 +133,8 @@ export default function StatisticsPage() {
           </SelectContent>
         </Select>
 
-        <Select value={timeRange} onValueChange={setTimeRange}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Período" />
-          </SelectTrigger>
+        <Select value={timeRange} onValueChange={val => setTimeRange(val ?? "todos")}>
+          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Período" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todo o período</SelectItem>
             <SelectItem value="7dias">Últimos 7 dias</SelectItem>
@@ -79,7 +145,7 @@ export default function StatisticsPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={val => setActiveTab(val as any)}>
         <TabsList>
           <TabsTrigger value="resumo">Resumo</TabsTrigger>
           <TabsTrigger value="convidados">Convidados</TabsTrigger>
@@ -91,7 +157,7 @@ export default function StatisticsPage() {
           {/* Cards de resumo */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardHeader className="flex justify-between pb-2">
                 <CardTitle className="text-sm font-medium">Total de Convidados</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
@@ -104,7 +170,7 @@ export default function StatisticsPage() {
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardHeader className="flex justify-between pb-2">
                 <CardTitle className="text-sm font-medium">Taxa de Confirmação</CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
@@ -117,18 +183,20 @@ export default function StatisticsPage() {
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardHeader className="flex justify-between pb-2">
                 <CardTitle className="text-sm font-medium">Presentes Reservados</CardTitle>
                 <Gift className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{reservedGifts}</div>
-                <p className="text-xs text-muted-foreground">{giftCompletionRate.toFixed(1)}% da lista de presentes</p>
+                <p className="text-xs text-muted-foreground">
+                  {giftCompletionRate.toFixed(1)}% da lista de presentes
+                </p>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardHeader className="flex justify-between pb-2">
                 <CardTitle className="text-sm font-medium">Valor Estimado</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
@@ -148,6 +216,7 @@ export default function StatisticsPage() {
               </CardHeader>
               <CardContent className="pl-2">
                 <div className="flex items-center gap-8">
+                  {/* Donut Chart */}
                   <div className="flex flex-col items-center">
                     <div className="relative h-40 w-40">
                       <div className="absolute inset-0 flex items-center justify-center">
@@ -170,6 +239,7 @@ export default function StatisticsPage() {
                       </svg>
                     </div>
                   </div>
+                  {/* Legenda */}
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <div className="h-3 w-3 rounded-full bg-primary"></div>
@@ -205,11 +275,11 @@ export default function StatisticsPage() {
                   <div className="pt-4">
                     <div className="text-sm font-medium">Top Presentes</div>
                     <ul className="mt-2 space-y-2">
-                      {topGifts.map((gift) => (
+                      {(topGifts ?? []).map((gift, idx) => (
                         <li key={gift.id} className="flex items-center justify-between">
                           <div className="text-sm">{gift.name}</div>
                           <div className="text-sm text-muted-foreground">
-                            {gift.reserved || 0} de {gift.quantity}
+                            {(gift.reserved ?? 0)} de {(gift.quantity ?? 0)}
                           </div>
                         </li>
                       ))}
@@ -221,7 +291,7 @@ export default function StatisticsPage() {
           </div>
         </TabsContent>
 
-        {/* Conteúdo da aba Convidados */}
+        {/* Aba Convidados */}
         <TabsContent value="convidados" className="space-y-6 mt-6">
           <Card>
             <CardHeader>
@@ -230,7 +300,6 @@ export default function StatisticsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {/* Gráfico de status */}
                 <div>
                   <h3 className="text-lg font-medium mb-4">Status de Confirmação</h3>
                   <div className="grid grid-cols-3 gap-4">
@@ -248,8 +317,6 @@ export default function StatisticsPage() {
                     </div>
                   </div>
                 </div>
-
-                {/* Taxa de resposta */}
                 <div>
                   <h3 className="text-lg font-medium mb-2">Taxa de Resposta</h3>
                   <div className="flex items-center">
@@ -264,7 +331,7 @@ export default function StatisticsPage() {
                         <div
                           className="h-full bg-blue-500"
                           style={{ width: `${((confirmedGuests + declinedGuests) / totalGuests) * 100}%` }}
-                        ></div>
+                        />
                       </div>
                     </div>
                   </div>
@@ -274,7 +341,7 @@ export default function StatisticsPage() {
           </Card>
         </TabsContent>
 
-        {/* Conteúdo da aba Presentes */}
+        {/* Aba Presentes */}
         <TabsContent value="presentes" className="space-y-6 mt-6">
           <Card>
             <CardHeader>
@@ -283,7 +350,6 @@ export default function StatisticsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {/* Resumo de presentes */}
                 <div className="grid grid-cols-3 gap-4">
                   <div className="flex flex-col items-center p-4 bg-blue-50 rounded-lg">
                     <div className="text-3xl font-bold text-blue-600">{totalGifts}</div>
@@ -291,15 +357,13 @@ export default function StatisticsPage() {
                   </div>
                   <div className="flex flex-col items-center p-4 bg-purple-50 rounded-lg">
                     <div className="text-3xl font-bold text-purple-600">{reservedGifts}</div>
-                    <div className="text-sm text-purple-700">Presentes Reservados</div>
+                    <div className="text-sm text-purple-700">Reservados</div>
                   </div>
                   <div className="flex flex-col items-center p-4 bg-emerald-50 rounded-lg">
                     <div className="text-3xl font-bold text-emerald-600">R$ {estimatedValue.toFixed(0)}</div>
                     <div className="text-sm text-emerald-700">Valor Estimado</div>
                   </div>
                 </div>
-
-                {/* Progresso da lista */}
                 <div>
                   <h3 className="text-lg font-medium mb-2">Progresso da Lista</h3>
                   <div className="flex items-center">
@@ -309,25 +373,24 @@ export default function StatisticsPage() {
                         <span className="text-sm font-medium">{giftCompletionRate.toFixed(1)}%</span>
                       </div>
                       <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                        <div className="h-full bg-primary" style={{ width: `${giftCompletionRate}%` }}></div>
+                        <div
+                          className="h-full bg-primary"
+                          style={{ width: `${giftCompletionRate}%` }}
+                        />
                       </div>
                     </div>
                   </div>
                 </div>
-
-                {/* Top presentes */}
                 <div>
                   <h3 className="text-lg font-medium mb-2">Presentes Mais Populares</h3>
                   <ul className="space-y-3">
-                    {topGifts.map((gift, index) => (
+                    {topGifts.map((gift, i) => (
                       <li key={gift.id} className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <span className="font-medium text-sm mr-2">{index + 1}.</span>
-                          <span>{gift.name}</span>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {gift.reserved || 0} de {gift.quantity} reservados
-                        </div>
+                        <span className="font-medium text-sm mr-2">{i + 1}.</span>
+                        <span>{gift.name}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {(gift.reserved ?? 0)} de {(gift.quantity ?? 0)}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -339,4 +402,5 @@ export default function StatisticsPage() {
       </Tabs>
     </div>
   )
+
 }

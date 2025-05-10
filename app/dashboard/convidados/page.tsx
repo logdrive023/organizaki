@@ -1,210 +1,278 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { PlusCircle, Users, Search, Mail, CheckCircle, XCircle, HelpCircle, Loader2 } from "lucide-react"
+import Link from "next/link"
+import {
+  PlusCircle,
+  Users,
+  Search,
+  Mail,
+  CheckCircle,
+  XCircle,
+  HelpCircle,
+  Loader2,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { mockGuests, mockEvents } from "@/lib/mock-data"
-import Link from "next/link"
-import type { GuestType } from "@/lib/types"
-import { sendInvites } from "@/lib/guest-actions"
-import { useToast } from "@/components/ui/use-toast"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
+import { useToast } from "@/components/ui/use-toast"
 import { GuestDetailsDialog } from "@/components/dashboard/guest-details-dialog"
 
+import { eventAPI } from "@/lib/api/event"
+import { sendInvites } from "@/lib/guest-actions"
+import type { GuestType, EventType } from "@/lib/interface/event"
+
+import { mockGuests, mockEvents } from "@/lib/mock-data"
+
 export default function GuestsPage() {
-  const [activeTab, setActiveTab] = useState("todos")
-  const [sortOrder, setSortOrder] = useState("recentes")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [eventFilter, setEventFilter] = useState("todos")
-  const [filteredGuests, setFilteredGuests] = useState<GuestType[]>(mockGuests)
-  const [selectedGuests, setSelectedGuests] = useState<string[]>([])
-  const [isSending, setIsSending] = useState(false)
-  const [selectedGuest, setSelectedGuest] = useState<GuestType | null>(null)
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const { toast } = useToast()
 
-  // Função para filtrar e ordenar convidados
+  // dados brutos
+  const [guests, setGuests] = useState<GuestType[]>([])
+  const [events, setEvents] = useState<EventType[]>([])
+  // filtrados e ordenados
+  //const [filteredGuests, setFilteredGuests] = useState<GuestType[]>([])
+  // descomentar para ver o mock
+  const [filteredGuests, setFilteredGuests] = useState<GuestType[]>(mockGuests)
+  // seleção de checkboxes
+  const [selectedGuests, setSelectedGuests] = useState<string[]>([])
+  // filtros, ordenação e busca
+  const [activeTab, setActiveTab] = useState<"todos" | "confirmados" | "pendentes" | "recusados">("todos")
+  const [sortOrder, setSortOrder] = useState<"recentes" | "alfabetica" | "status">("recentes")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [eventFilter, setEventFilter] = useState<string>("todos")
+  // loading / error
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  // envio de convites
+  const [isSending, setIsSending] = useState(false)
+  // detalhes & edição
+  const [selectedGuest, setSelectedGuest] = useState<GuestType | null>(null)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  const [removingIds, setRemovingIds] = useState<string[]>([])
+  const [guestToRemove, setGuestToRemove] = useState<GuestType | null>(null)
+
+
+  // paginação
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
+
+  // fetch inicial de convidados e eventos
   useEffect(() => {
-    let result = [...mockGuests]
+    setLoading(true)
+    Promise.all([eventAPI.selectGust(), eventAPI.selectEventAll()])
+      .then(([guestList, eventList]) => {
+        setGuests(guestList)
+        setEvents(eventList)
+      })
+      .catch((err: any) => {
+        setError(err.message || "Erro ao carregar dados")
+        toast({
+          variant: "destructive",
+          title: "Falha na requisição",
+          description: err.message || "Tente novamente mais tarde.",
+        })
+      })
+      .finally(() => setLoading(false))
+  }, [])
 
-    // Aplicar filtro por status
-    if (activeTab === "confirmados") {
-      result = result.filter((guest) => guest.status === "confirmed")
-    } else if (activeTab === "pendentes") {
-      result = result.filter((guest) => guest.status === "pending")
-    } else if (activeTab === "recusados") {
-      result = result.filter((guest) => guest.status === "declined")
+  //filtrar, buscar e ordenar sempre que inputs mudarem
+  useEffect(() => {
+    let result = [...guests]
+  
+    // status
+    if (activeTab !== "todos") {
+      const mapStatus = {
+        confirmados: "confirmed",
+        pendentes:   "pending",
+        recusados:   "declined",
+      } as const
+      result = result.filter(g => g.status === mapStatus[activeTab])
     }
-
-    // Aplicar filtro por evento
+  
+    // evento
     if (eventFilter !== "todos") {
-      result = result.filter((guest) => guest.eventId === eventFilter)
+      result = result.filter(g => g.eventId === eventFilter)
     }
-
-    // Aplicar busca
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      result = result.filter(
-        (guest) =>
-          guest.name.toLowerCase().includes(query) ||
-          guest.email.toLowerCase().includes(query) ||
-          (guest.phone && guest.phone.toLowerCase().includes(query)),
+  
+    // busca
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      result = result.filter(g =>
+        g.name.toLowerCase().includes(q) ||
+        g.email.toLowerCase().includes(q) ||
+        (g.phone?.toLowerCase().includes(q) ?? false)
       )
     }
-
-    // Aplicar ordenação
+  
+    // ordenação
     if (sortOrder === "recentes") {
       result.sort((a, b) => b.id.localeCompare(a.id))
     } else if (sortOrder === "alfabetica") {
       result.sort((a, b) => a.name.localeCompare(b.name))
     } else if (sortOrder === "status") {
-      const statusOrder = { confirmed: 1, pending: 2, declined: 3 }
-      result.sort((a, b) => statusOrder[a.status] - statusOrder[b.status])
+      const order = { confirmed: 1, pending: 2, declined: 3 }
+      result.sort((a, b) => order[a.status] - order[b.status])
     }
-
+  
     setFilteredGuests(result)
-    // Limpar seleções quando os filtros mudam
     setSelectedGuests([])
-  }, [activeTab, sortOrder, searchQuery, eventFilter])
+    setCurrentPage(1)
+  }, [guests, activeTab, sortOrder, searchQuery, eventFilter])
 
-  // Contagem de convidados por status
-  const totalGuests = mockGuests.length
-  const confirmedGuests = mockGuests.filter((guest) => guest.status === "confirmed").length
-  const pendingGuests = mockGuests.filter((guest) => guest.status === "pending").length
-  const declinedGuests = mockGuests.filter((guest) => guest.status === "declined").length
+  // funções auxiliares
+  const getEventName = (id: string) =>
+    events.find(e => e.id === id)?.title ?? "Evento não encontrado"
 
-  // Função para obter o nome do evento pelo ID
-  const getEventName = (eventId: string) => {
-    const event = mockEvents.find((e) => e.id === eventId)
-    return event ? event.title : "Evento não encontrado"
+  const getStatusIcon = (s: string) => {
+    if (s === "confirmed") return <CheckCircle className="h-5 w-5 text-green-500" />
+    if (s === "declined") return <XCircle className="h-5 w-5 text-destructive" />
+    return <HelpCircle className="h-5 w-5 text-muted-foreground" />
+  }
+  const getStatusBadge = (s: string) => {
+    if (s === "confirmed") return <Badge className="bg-green-500">Confirmado</Badge>
+    if (s === "declined") return <Badge variant="destructive">Recusado</Badge>
+    return <Badge variant="outline">Pendente</Badge>
   }
 
-  // Função para renderizar o ícone de status
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "confirmed":
-        return <CheckCircle className="h-5 w-5 text-green-500" />
-      case "declined":
-        return <XCircle className="h-5 w-5 text-destructive" />
-      default:
-        return <HelpCircle className="h-5 w-5 text-muted-foreground" />
-    }
-  }
-
-  // Função para renderizar o badge de status
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "confirmed":
-        return <Badge className="bg-green-500">Confirmado</Badge>
-      case "declined":
-        return <Badge variant="destructive">Recusado</Badge>
-      default:
-        return <Badge variant="outline">Pendente</Badge>
-    }
-  }
-
-  // Função para selecionar/deselecionar todos os convidados
+  // seleção em massa
   const toggleSelectAll = () => {
-    if (selectedGuests.length === filteredGuests.length) {
-      setSelectedGuests([])
-    } else {
-      setSelectedGuests(filteredGuests.map((guest) => guest.id))
-    }
+    const safe = filteredGuests ?? []
+    setSelectedGuests(
+      selectedGuests.length === safe.length ? [] : safe.map(g => g.id)
+    )
   }
+  const toggleSelectGuest = (id: string) =>
+    setSelectedGuests(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
-  // Função para selecionar/deselecionar um convidado
-  const toggleSelectGuest = (guestId: string) => {
-    if (selectedGuests.includes(guestId)) {
-      setSelectedGuests(selectedGuests.filter((id) => id !== guestId))
-    } else {
-      setSelectedGuests([...selectedGuests, guestId])
-    }
-  }
-
-  // Função para enviar convites
+  // enviar convites
   const handleSendInvites = async () => {
-    if (selectedGuests.length === 0) {
-      toast({
-        title: "Nenhum convidado selecionado",
-        description: "Selecione pelo menos um convidado para enviar o convite.",
-        variant: "destructive",
-      })
+    if (!selectedGuests.length) {
+      toast({ title: "Nenhum convidado selecionado", description: "Selecione ao menos um.", variant: "destructive" })
       return
     }
-
     setIsSending(true)
     try {
-      // Usar o ID do evento do primeiro convidado selecionado
-      // Em uma aplicação real, você pode querer agrupar por evento
-      const firstGuest = filteredGuests.find((g) => g.id === selectedGuests[0])
-      const eventId = firstGuest?.eventId || "default-event"
-
-      const result = await sendInvites(eventId, selectedGuests)
-
-      toast({
-        title: "Convites enviados com sucesso!",
-        description: `${result.sent} convites foram enviados.`,
-        variant: "default",
-      })
-
-      // Limpar seleções após envio bem-sucedido
+      const first = (filteredGuests ?? []).find(g => g.id === selectedGuests[0])
+      const { sent } = await sendInvites(first?.eventId ?? "", selectedGuests)
+      toast({ title: "Convites enviados", description: `${sent} convites enviados.` })
       setSelectedGuests([])
-    } catch (error) {
-      toast({
-        title: "Erro ao enviar convites",
-        description: "Ocorreu um erro ao enviar os convites. Tente novamente.",
-        variant: "destructive",
-      })
+    } catch {
+      toast({ title: "Erro ao enviar convites", variant: "destructive" })
     } finally {
       setIsSending(false)
     }
   }
 
-  // Função para abrir o diálogo de detalhes do convidado
-  const openGuestDetails = (guest: GuestType) => {
-    setSelectedGuest(guest)
+  // detalhes / edição
+  const openGuestDetails = (g: GuestType) => {
+    setSelectedGuest(g)
     setIsDetailsOpen(true)
   }
-
-  // Função para salvar as alterações do convidado
-  const handleSaveGuest = (updatedGuest: GuestType) => {
-    // Em uma aplicação real, você enviaria isso para o servidor
-    // Aqui, apenas atualizamos o estado local
-    const updatedGuests = mockGuests.map((g) => (g.id === updatedGuest.id ? updatedGuest : g))
-
-    // Atualizar a lista filtrada também
-    setFilteredGuests(filteredGuests.map((g) => (g.id === updatedGuest.id ? updatedGuest : g)))
-
-    toast({
-      title: "Convidado atualizado",
-      description: "As informações do convidado foram atualizadas com sucesso.",
-    })
-
+  const handleSaveGuest = (updated: GuestType) => {
+    setGuests(prev => prev.map(g => g.id === updated.id ? updated : g))
+    toast({ title: "Convidado atualizado", description: "Dados salvos." })
     setIsDetailsOpen(false)
   }
 
+  const handleRemoveGuest = async (guest: GuestType) => {
+    // marca como “removendo”
+    setRemovingIds(ids => [...ids, guest.id])
+  
+    try {
+      // chama a API
+      await eventAPI.removeGuest(guest.eventId!, guest.id)
+  
+      // atualiza a lista local
+      setGuests(prev => prev.filter(g => g.id !== guest.id))
+  
+      // toast de sucesso
+      toast({
+        title: "Convidado removido",
+        description: `${guest.name} foi removido com sucesso.`,
+      })
+    } catch (err: any) {
+      // toast de erro
+      toast({
+        variant: "destructive",
+        title: "Falha ao remover",
+        description: err.message || "Tente novamente mais tarde.",
+      })
+    }
+  
+    // limpa sempre, depois do try/catch
+    setRemovingIds(ids => ids.filter(id => id !== guest.id))
+  }
+  
+
+
+
+  // loader / erro
+  if (loading) {
+    return (
+      <Card className="p-8 text-center">
+        <Loader2 className="animate-spin h-6 w-6 mx-auto mb-2" />
+        Carregando convidados...
+      </Card>
+    )
+  }
+
+  // paginação
+  const safe = filteredGuests ?? []
+  const totalGuests = safe.length
+  const totalPages = Math.ceil(totalGuests / itemsPerPage) || 1
+  const sliceStart = (currentPage - 1) * itemsPerPage
+  const sliceEnd = sliceStart + itemsPerPage
+  const paginated = safe.slice(sliceStart, sliceEnd)
+  const hasPrev = currentPage > 1
+  const hasNext = currentPage < totalPages
+
   return (
     <div className="space-y-6">
-      {/* Header com ações */}
+      {/* header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Convidados</h1>
-          <p className="text-muted-foreground">Gerencie a lista de convidados dos seus eventos.</p>
+          <h1 className="text-2xl font-bold">Convidados</h1>
+          <p className="text-muted-foreground">
+            Gerencie seus convidados.
+          </p>
         </div>
         <div className="flex gap-2">
           <Button
             variant="outline"
             className="gap-2"
             onClick={handleSendInvites}
-            disabled={selectedGuests.length === 0 || isSending}
+            disabled={!selectedGuests.length || isSending}
           >
-            {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+            {isSending
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : <Mail className="h-4 w-4" />}
             {isSending ? "Enviando..." : "Enviar Convites"}
           </Button>
           <Button asChild>
@@ -216,37 +284,34 @@ export default function GuestsPage() {
         </div>
       </div>
 
-      {/* Filtros e Busca */}
+      {/* filtros e busca */}
       <div className="flex flex-col gap-4 md:flex-row">
         <div className="flex flex-1 items-center rounded-md border bg-muted/40 px-3">
-          <Search className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
+          <Search className="mr-2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar convidados..."
-            className="h-9 flex-1 border-0 bg-transparent px-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+            className="h-9 flex-1 border-0 bg-transparent px-0 focus-visible:ring-0"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={e => setSearchQuery(e.target.value)}
           />
         </div>
-
         <div className="flex gap-2">
-          <Select value={eventFilter} onValueChange={setEventFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filtrar por evento" />
-            </SelectTrigger>
+          <Select value={eventFilter} onValueChange={val => setEventFilter(val)}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filtrar evento" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos os eventos</SelectItem>
-              {mockEvents.map((event) => (
-                <SelectItem key={event.id} value={event.id}>
-                  {event.title}
-                </SelectItem>
+              {events.map(ev => (
+                <SelectItem key={ev.id} value={ev.id}>{ev.title}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-
-          <Select value={sortOrder} onValueChange={setSortOrder}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Ordenar por" />
-            </SelectTrigger>
+          <Select
+            value={sortOrder}
+            onValueChange={val =>
+              setSortOrder(val as "recentes" | "alfabetica" | "status")
+            }
+          >
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Ordenar por" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="recentes">Mais recentes</SelectItem>
               <SelectItem value="alfabetica">Ordem alfabética</SelectItem>
@@ -256,99 +321,190 @@ export default function GuestsPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="todos" value={activeTab} onValueChange={setActiveTab}>
+      {/* abas */}
+      <Tabs value={activeTab} onValueChange={val => setActiveTab(val as any)}>
         <TabsList>
           <TabsTrigger value="todos">Todos ({totalGuests})</TabsTrigger>
-          <TabsTrigger value="confirmados">Confirmados ({confirmedGuests})</TabsTrigger>
-          <TabsTrigger value="pendentes">Pendentes ({pendingGuests})</TabsTrigger>
-          <TabsTrigger value="recusados">Recusados ({declinedGuests})</TabsTrigger>
+          <TabsTrigger value="confirmados">Confirmados ({guests.filter(g => g.status === "confirmed").length})</TabsTrigger>
+          <TabsTrigger value="pendentes">Pendentes ({guests.filter(g => g.status === "pending").length})</TabsTrigger>
+          <TabsTrigger value="recusados">Recusados ({guests.filter(g => g.status === "declined").length})</TabsTrigger>
         </TabsList>
       </Tabs>
 
-      {/* Lista de convidados */}
-      {filteredGuests.length > 0 ? (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px]">
-                  <Checkbox
-                    checked={selectedGuests.length === filteredGuests.length && filteredGuests.length > 0}
-                    onCheckedChange={toggleSelectAll}
-                    aria-label="Selecionar todos"
-                  />
-                </TableHead>
-                <TableHead>Nome</TableHead>
-                <TableHead>E-mail</TableHead>
-                <TableHead>Telefone</TableHead>
-                <TableHead>Evento</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredGuests.map((guest) => (
-                <TableRow key={guest.id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedGuests.includes(guest.id)}
-                      onCheckedChange={() => toggleSelectGuest(guest.id)}
-                      aria-label={`Selecionar ${guest.name}`}
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">{guest.name}</TableCell>
-                  <TableCell>{guest.email}</TableCell>
-                  <TableCell>{guest.phone || "-"}</TableCell>
-                  <TableCell>{getEventName(guest.eventId || "")}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(guest.status)}
-                      {getStatusBadge(guest.status)}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => openGuestDetails(guest)}>
-                        Editar
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-destructive">
-                        Remover
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      ) : (
-        <Card className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-muted">
-            <Users className="h-10 w-10 text-muted-foreground" />
-          </div>
-          <h2 className="mt-6 text-xl font-semibold">Nenhum convidado encontrado</h2>
-          <p className="mb-8 mt-2 text-sm text-muted-foreground">
-            {searchQuery
-              ? "Nenhum convidado corresponde à sua busca. Tente outros termos."
-              : "Adicione convidados à sua lista para enviar convites e acompanhar confirmações."}
-          </p>
-          <Button asChild>
-            <Link href="/dashboard/convidados/novo">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Adicionar Convidado
-            </Link>
+      {/* contador e paginação topo */}
+      <div className="flex justify-between items-center">
+        <span className="text-sm text-muted-foreground">
+          Tem <strong>{totalGuests}</strong> convidado{totalGuests !== 1 && "s"}
+        </span>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setCurrentPage(p => p - 1)} disabled={!hasPrev}>
+            Anterior
           </Button>
-        </Card>
-      )}
+          <span className="flex items-center px-2">
+            {currentPage} / {totalPages}
+          </span>
+          <Button size="sm" variant="outline" onClick={() => setCurrentPage(p => p + 1)} disabled={!hasNext}>
+            Próxima
+          </Button>
+        </div>
+      </div>
 
-      {/* Diálogo de detalhes do convidado */}
+      {/* tabela */}
+      {
+        paginated.length > 0 ? (
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={selectedGuests.length === paginated.length}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Selecionar todos"
+                    />
+                  </TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>E-mail</TableHead>
+                  <TableHead>Telefone</TableHead>
+                  <TableHead>Evento</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginated.map(guest => (
+                  <TableRow key={guest.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedGuests.includes(guest.id)}
+                        onCheckedChange={() => toggleSelectGuest(guest.id)}
+                        aria-label={`Selecionar ${guest.name}`}
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium">{guest.name}</TableCell>
+                    <TableCell>{guest.email}</TableCell>
+                    <TableCell>{guest.phone || "—"}</TableCell>
+                    <TableCell>{getEventName(guest.eventId || "")}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(guest.status)}
+                        {getStatusBadge(guest.status)}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" type="button" onClick={() => openGuestDetails(guest)}>
+                          Editar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive"
+                          onClick={() => setGuestToRemove(guest)}
+                          disabled={removingIds.includes(guest.id)}
+                        >
+                          {removingIds.includes(guest.id)
+                            ? <Loader2 className="h-4 w-4 animate-spin" />
+                            : "Remover"}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        ) : (
+          <Card className="flex flex-col items-center justify-center border-dashed p-8 text-center">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted mx-auto">
+              <Users className="h-10 w-10 text-muted-foreground" />
+            </div>
+            <h2 className="mt-6 text-xl font-semibold">Nenhum convidado encontrado</h2>
+            <p className="mt-2 mb-8 text-sm text-muted-foreground">
+              {searchQuery
+                ? "Nenhum convidado corresponde à sua busca."
+                : "Adicione convidados para começar."}
+            </p>
+            <Button asChild>
+              <Link href="/dashboard/convidados/novo">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Adicionar Convidado
+              </Link>
+            </Button>
+          </Card>
+        )
+      }
+
+      {/* paginação rodapé */}
+      {
+        totalPages > 1 && (
+          <div className="flex justify-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => setCurrentPage(p => p - 1)} disabled={!hasPrev}>
+              « Anterior
+            </Button>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <Button
+                key={i}
+                size="sm"
+                variant={i + 1 === currentPage ? "default" : "outline"}
+                onClick={() => setCurrentPage(i + 1)}
+              >
+                {i + 1}
+              </Button>
+            ))}
+            <Button size="sm" variant="outline" onClick={() => setCurrentPage(p => p + 1)} disabled={!hasNext}>
+              Próxima »
+            </Button>
+          </div>
+        )
+      }
+
+      {/* modal de detalhes */}
       <GuestDetailsDialog
         guest={selectedGuest}
         open={isDetailsOpen}
         onOpenChange={setIsDetailsOpen}
         onSave={handleSaveGuest}
       />
-    </div>
+
+      <Dialog
+        open={!!guestToRemove}
+        onOpenChange={() => setGuestToRemove(null)}
+      >
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Confirmar remoção</DialogTitle>
+            <DialogDescription>
+              Tem certeza que quer remover{" "}
+              <strong>{guestToRemove?.name}</strong> da lista?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setGuestToRemove(null)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="ghost"
+              className="text-destructive"
+              onClick={async () => {
+                if (!guestToRemove) return
+                // chama sua lógica de remoção
+                await handleRemoveGuest(guestToRemove)
+                setGuestToRemove(null)
+              }}
+              disabled={removingIds.includes(guestToRemove?.id!)}
+            >
+              {removingIds.includes(guestToRemove?.id!)
+                ? <Loader2 className="h-4 w-4 animate-spin" />
+                : "Remover"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+    </div >
   )
 }

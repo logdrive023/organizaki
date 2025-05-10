@@ -6,7 +6,9 @@ import {
   GiftType,
   NewGiftRequest,
   NewGuestRequest,
-  SelectEvent
+  SelectEvent,
+  SelectGust,
+  UpdateGuestRequest
 } from "@/lib/interface/event"
 
 // Dados mock iniciais
@@ -176,6 +178,25 @@ export const eventAPI = {
     )
   },
 
+  updateGuest: async (
+    req: UpdateGuestRequest
+  ): Promise<GuestType> => {
+    // Desconstrói eventId e id para montar a URL, e o resto virá no body
+    const { eventId, id, ...body } = req
+
+    return handleRequest<GuestType>(
+      // PUT em /{eventId}/guests/{id}
+      `${API_BASE_URL}/${eventId}/guests/${id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      }
+    )
+  },
+
   // Remover convidado
   removeGuest: async (
     eventId: string,
@@ -205,11 +226,40 @@ export const eventAPI = {
     )
   },
 
+  // Obter convidados
+  selectGust: async (): Promise<GuestType[]> => {
+    // Pega toda a lista de eventos do backend
+    const events = await handleRequest<GuestType[]>(
+      `${API_BASE_URL}/guest/select`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      }
+    )
+    // Mapeia para somente id e name
+    return events
+  },
+
+  // Obter eventos lista
+  selectEventAll: async (): Promise<EventType[]> => {
+    // Pega toda a lista de eventos do backend
+    const events = await handleRequest<EventType[]>(
+      `${API_BASE_URL}/event-all/select`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      }
+    )
+    // Mapeia para somente id e name
+    return events
+  },
+
+
   // Obter eventos
   selectEvent: async (): Promise<SelectEvent[]> => {
     // Pega toda a lista de eventos do backend
     const events = await handleRequest<EventType[]>(
-      `${API_BASE_URL}`,
+      `${API_BASE_URL}/event/select`,
       {
         method: "GET",
         headers: { "Content-Type": "application/json" },

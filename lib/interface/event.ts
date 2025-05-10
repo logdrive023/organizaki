@@ -85,6 +85,7 @@ export interface NewGuestRequest {
     name: string
     email: string
     phone?: string
+    message?: string  
     status: "pending" | "confirmed" | "declined"
 }
 
@@ -92,3 +93,19 @@ export interface SelectEvent {
     id: string
     name: string
 }
+
+export interface SelectGust {
+    id: string
+    name: string
+}
+
+export interface UpdateGuestRequest {
+    eventId: string
+    id: string
+    name: string
+    email: string
+    phone?: string
+    message?: string
+    status: "pending" | "confirmed" | "declined"
+  }
+  
