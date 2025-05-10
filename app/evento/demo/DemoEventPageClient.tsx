@@ -238,14 +238,14 @@ export default function DemoEventPageClient() {
                   referrerPolicy="no-referrer-when-downgrade"
                 ></iframe>
               </div>
-              <div className="mt-4 flex flex-col gap-2">
+              <div className="mt-4 space-y-2">
                 <p className="text-sm text-muted-foreground">{event.location}</p>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="gap-1.5">
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" className="flex-shrink-0 whitespace-nowrap gap-1.5">
                     <MapPin className="h-3.5 w-3.5" />
                     <span>Como chegar</span>
                   </Button>
-                  <Button variant="outline" size="sm" className="gap-1.5">
+                  <Button variant="outline" size="sm" className="flex-shrink-0 whitespace-nowrap gap-1.5">
                     <Share2 className="h-3.5 w-3.5" />
                     <span>Compartilhar local</span>
                   </Button>
