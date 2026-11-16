@@ -1,0 +1,53 @@
+# Publica a demonstração no GitHub Pages a cada push na main (sem backend: os dados ficam no localStorage).
+# Configuração única no GitHub: Settings → Pages → Build and deployment → Source: "GitHub Actions".
+# Sem isso o deploy falha com "HttpError: Not Found" (404).
+name: Publicar no GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # versão fixa do Ubuntu: a troca do "ubuntu-latest" não muda o ambiente sem aviso
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # tipos + build no modo demonstração (base /organizaki/)
+      - run: npm run build:pages
+      - uses: actions/configure-pages@v5
+        if: github.event_name != 'pull_request'
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
+        with:
+          path: dist
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

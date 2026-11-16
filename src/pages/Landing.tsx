@@ -1,5 +1,6 @@
 import { BarChart3, Bell, CalendarHeart, Check, Gift, Link2, MapPin, MessageCircle, Share2, Sparkles, Users } from 'lucide-react'
 import { SiteLayout } from '../components/SiteLayout'
+import { asset } from '../lib/paths'
 import { ButtonLink, Card } from '../components/ui'
 
 const steps = [
@@ -34,7 +35,7 @@ function EventPreview() {
     <div className="relative mx-auto w-full max-w-sm">
       <div className="absolute -inset-6 -z-10 rounded-[2.5rem] bg-brand-soft/70 blur-2xl" aria-hidden />
       <Card className="overflow-hidden shadow-xl">
-        <img src="/img/evento-casamento.webp" alt="" className="h-44 w-full object-cover" />
+        <img src={asset('img/evento-casamento.webp')} alt="" className="h-44 w-full object-cover" />
         <div className="space-y-4 p-5">
           <div>
             <p className="text-xs font-semibold tracking-wide text-brand uppercase">Faltam 58 dias</p>
@@ -46,7 +47,7 @@ function EventPreview() {
             <div className="rounded-xl bg-soft py-2.5 font-semibold text-muted">Não poderei</div>
           </div>
           <div className="flex items-center gap-3 rounded-xl border border-line p-2.5">
-            <img src="/img/presente-cafeteira.webp" alt="" className="size-12 rounded-lg object-cover" />
+            <img src={asset('img/presente-cafeteira.webp')} alt="" className="size-12 rounded-lg object-cover" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">Cafeteira elétrica</p>
               <p className="text-xs text-muted">R$ 189,90</p>

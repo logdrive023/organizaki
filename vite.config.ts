@@ -4,9 +4,11 @@ import tailwindcss from '@tailwindcss/vite'
 
 const api = process.env.VITE_API_PROXY ?? 'http://localhost:8095'
 
+// Build do GitHub Pages (`npm run build:pages`): app em /organizaki/ e modo demonstração (dados no localStorage).
 // Em dev, /api e /uploads vão para a API Go: mesma origem, sem CORS.
 // A porta 5173 fica livre de propósito (projetos da energybr usam nesta máquina); 5174–5176 são do OneMinute.
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  base: mode === 'pages' ? '/organizaki/' : '/',
   plugins: [react(), tailwindcss()],
   server: {
     port: 5180,
@@ -17,4 +19,4 @@ export default defineConfig({
       '/uploads': { target: api, changeOrigin: false },
     },
   },
-})
+}))

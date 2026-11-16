@@ -9,6 +9,7 @@ import { toast } from '../../components/toast'
 import { Badge, Button, ButtonLink, Card, Confirm, ErrorBox, Spinner, Tabs } from '../../components/ui'
 import { del, errorMessage, put } from '../../lib/api'
 import { countdown, longDate, whatsappUrl } from '../../lib/format'
+import { appUrl } from '../../lib/paths'
 import { useEvent, useEvents, useGifts, useGuests, useInvalidateAll, useStats } from '../../lib/queries'
 import type { EventItem } from '../../lib/types'
 
@@ -27,7 +28,7 @@ export default function EventDetail() {
   if (event.isPending) return <Spinner />
   if (event.error) return <ErrorBox error={event.error} />
   const e = event.data
-  const publicUrl = `${location.origin}/e/${e.slug}`
+  const publicUrl = appUrl(`/e/${e.slug}`)
 
   async function setStatus(status: 'active' | 'draft') {
     setBusy(true)
@@ -85,9 +86,9 @@ export default function EventDetail() {
               <Rocket className="size-4" /> Publicar
             </Button>
           ) : (
-            <a href={`/e/${e.slug}`} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center gap-2 rounded-xl border border-line bg-card px-4 text-sm font-semibold hover:bg-soft">
+            <Link to={`/e/${e.slug}`} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center gap-2 rounded-xl border border-line bg-card px-4 text-sm font-semibold hover:bg-soft">
               <ExternalLink className="size-4" /> Ver página
-            </a>
+            </Link>
           )}
           <ButtonLink to={`/painel/eventos/${id}/editar`} variant="secondary">
             <Pencil className="size-4" /> Editar

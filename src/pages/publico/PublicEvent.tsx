@@ -7,6 +7,7 @@ import { toast } from '../../components/toast'
 import { Badge, Button, ButtonLink, Card, Empty, ErrorBox, Input, Logo, Modal, Progress, Spinner, Tabs, Textarea } from '../../components/ui'
 import { ApiError, errorMessage, fieldErrors, get, post } from '../../lib/api'
 import { countdown, longDate, mapsUrl, money } from '../../lib/format'
+import { appUrl } from '../../lib/paths'
 import { dropTicket, isPurchasedHere, markPurchasedHere, saveTicket, ticketFor } from '../../lib/tickets'
 import type { InvitePreview, PublicEvent as PublicEventT, PublicGift, Ticket } from '../../lib/types'
 
@@ -28,7 +29,7 @@ export default function PublicEvent() {
   const e = event.data
 
   async function share() {
-    const url = `${location.origin}/e/${slug}`
+    const url = appUrl(`/e/${slug}`)
     try {
       if (navigator.share) await navigator.share({ title: e.title, url })
       else {

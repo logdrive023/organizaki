@@ -4,6 +4,7 @@ import { toast } from '../components/toast'
 import { Button, Card, Input, Logo } from '../components/ui'
 import { errorMessage, fieldErrors, post } from '../lib/api'
 import { safeBack } from '../lib/nav'
+import { DEMO } from '../lib/paths'
 import { useSession } from '../lib/session'
 import type { Session } from '../lib/types'
 
@@ -76,7 +77,34 @@ export function Login() {
           Entrar
         </Button>
       </form>
+      {DEMO && <DemoButtons />}
     </AuthShell>
+  )
+}
+
+function DemoButtons() {
+  const setSession = useSession((s) => s.setSession)
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
+  async function enter() {
+    const { demoSession } = await import('../lib/demo')
+    setSession(demoSession() as Session)
+    navigate(safeBack(params.get('volta')), { replace: true })
+  }
+  async function reset() {
+    const { resetDemo } = await import('../lib/demo')
+    resetDemo()
+    toast.ok('Demonstração zerada: tudo voltou ao começo.')
+  }
+  return (
+    <div className="mt-6 space-y-2 border-t border-line pt-6">
+      <Button variant="secondary" className="w-full" onClick={enter}>
+        Entrar na demonstração
+      </Button>
+      <button onClick={reset} className="w-full text-center text-xs text-muted underline">
+        Recomeçar a demonstração do zero
+      </button>
+    </div>
   )
 }
 

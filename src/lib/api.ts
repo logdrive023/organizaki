@@ -1,4 +1,5 @@
 import { getSession, syncFromStorage, useSession } from './session'
+import { DEMO } from './paths'
 import type { Session } from './types'
 
 export class ApiError extends Error {
@@ -50,6 +51,10 @@ async function freshToken(): Promise<string | null> {
 }
 
 export async function api<T>(path: string, init: RequestInit & { json?: unknown } = {}, retry = true): Promise<T> {
+  if (DEMO) {
+    const { demoApi } = await import('./demo')
+    return demoApi<T>(path, init.method ?? 'GET', init.json, init.body, getSession()?.accessToken ?? null)
+  }
   const token = await freshToken()
   const headers = new Headers(init.headers)
   if (token) headers.set('Authorization', `Bearer ${token}`)
