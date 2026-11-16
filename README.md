@@ -11,6 +11,16 @@ npm run build      # checa tipos e gera dist/
 ```
 Suba a API antes (ver README do backend). Conta de teste e evento demo (`/e/demo`) vêm do `seed` do backend.
 
+## Demonstração no GitHub Pages
+`https://logdrive023.github.io/organizaki/` — publicada pelo workflow `.github/workflows/deploy.yml` a cada push na `main`.
+No Pages não há API: o build `npm run build:pages` liga o modo demonstração (`.env.pages`, `VITE_DEMO=true`) e as
+chamadas vão para `src/lib/demo.ts`, que segue o mesmo contrato e as mesmas regras da API Go com os dados no
+localStorage do navegador. Na tela de entrada há "Entrar na demonstração" e "Recomeçar a demonstração do zero".
+```bash
+npm run dev:demo      # o mesmo modo, local, sem precisar da API
+```
+Configuração única no GitHub: Settings → Pages → Source: **GitHub Actions**.
+
 ## Rotas
 | Rota | O quê |
 |---|---|
