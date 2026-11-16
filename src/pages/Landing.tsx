@@ -1,5 +1,6 @@
 import { CalendarHeart, Check, Gift, Heart, MapPin, MessageCircle, Navigation, Share2, Users, X } from 'lucide-react'
 import { Confetti, HandHeart, Sprig } from '../components/Decor'
+import { Kiki } from '../components/Kiki'
 import { SiteLayout } from '../components/SiteLayout'
 import { ButtonLink, Card } from '../components/ui'
 import { DEMO } from '../lib/paths'
@@ -28,12 +29,44 @@ const forGuest = [
   { icon: Gift, text: 'Escolhe o presente e vê na hora o que ainda está livre' },
 ]
 
+// O que quem acabou de chegar quer saber antes de experimentar (na ordem em que a dúvida aparece).
 const faq = [
-  { q: 'Quanto custa?', a: 'Criar o evento, convidar e montar a lista é grátis, sem limite de convidados. O Premium (R$ 10,00, uma vez só) apenas tira os anúncios do seu painel.' },
-  { q: 'Não fica feio mandar lista de presentes?', a: 'Pelo contrário: o convidado agradece por não ter que adivinhar — e por não chegar com a terceira cafeteira.' },
-  { q: 'E se duas pessoas quiserem o mesmo presente?', a: 'O presente escolhido sai da lista na hora. Ninguém dá repetido.' },
-  { q: 'Minha avó consegue usar?', a: 'Consegue. Ela abre o link, toca em "Vou!" e, se quiser, em "Abrir no Waze". Sem conta e sem aplicativo.' },
-  { q: 'O dinheiro do presente passa pelo Organizaki?', a: 'Não. O convidado compra na loja que você indicou e marca como comprado. A gente só organiza.' },
+  {
+    q: 'É grátis mesmo? Qual é a pegadinha?',
+    a: 'Não tem pegadinha. Criar o evento, convidar e montar a lista é grátis, sem limite de convidados e sem cartão. O único pago é o Premium: R$ 10,00, uma vez só, e ele só tira os anúncios do seu painel. Seus convidados nunca veem anúncio.',
+  },
+  {
+    q: 'Dá para testar antes de criar conta?',
+    a: 'Dá. Toque em "Testar a demonstração": tem um casamento de exemplo pronto, com convidados e lista de presentes. Mexa à vontade e veja também o convite do jeito que o convidado recebe.',
+  },
+  {
+    q: 'Em quanto tempo o convite fica pronto?',
+    a: 'Uns 2 minutos: nome do evento, data, endereço e uma foto. A lista de presentes e os convidados você coloca quando quiser, aos poucos.',
+  },
+  {
+    q: 'Meus convidados precisam baixar aplicativo ou criar conta?',
+    a: 'Não. Eles abrem o link no celular, veem o convite com o mapa, tocam em "Vou!" e escolhem o presente. Funciona até para quem não se dá bem com tecnologia.',
+  },
+  {
+    q: 'Como eu mando o convite para as pessoas?',
+    a: 'Pelo WhatsApp, com um toque: cada convidado ganha um link próprio, que já abre com o nome dele preenchido. Se preferir, copie o link ou mande por e-mail.',
+  },
+  {
+    q: 'Como eu sei quem vai e quantas pessoas são?',
+    a: 'No seu painel: quem confirmou, quem não vai, quem ainda não respondeu e quantos acompanhantes cada um leva. E você recebe um aviso a cada resposta.',
+  },
+  {
+    q: 'Posso colocar presente de qualquer loja?',
+    a: 'Pode: você coloca o nome, o preço, a foto e o link da loja que quiser. O convidado compra onde preferir e o dinheiro não passa pelo Organizaki. Quando alguém escolhe, o presente fica reservado e ninguém repete.',
+  },
+  {
+    q: 'Dá para mudar alguma coisa depois de mandar o link?',
+    a: 'Dá. Mudou o horário, o local ou o recado? É só editar: o link continua o mesmo e quem abrir já vê a versão nova.',
+  },
+  {
+    q: 'Quem vê os dados dos meus convidados?',
+    a: 'Só você. Na página do convite ninguém vê e-mail nem telefone dos outros, e a gente não vende dado de ninguém. Se quiser, você apaga a conta e tudo some na hora.',
+  },
 ]
 
 export default function Landing() {
@@ -179,7 +212,7 @@ export default function Landing() {
       <section id="perguntas" className="scroll-mt-20 border-t border-line bg-card py-20">
         <div className="mx-auto max-w-3xl px-4">
           <h2 className="text-center text-3xl font-semibold sm:text-4xl">Ficou alguma dúvida?</h2>
-          <p className="mt-3 text-center text-muted">Respostas curtas pro que todo mundo pergunta antes do grande dia.</p>
+          <p className="mt-3 text-center text-muted">O que todo mundo quer saber antes de criar o primeiro convite.</p>
           <div className="mt-10 divide-y divide-line rounded-2xl border border-line bg-paper">
             {faq.map((f) => (
               <details key={f.q} className="group p-5">
@@ -192,6 +225,19 @@ export default function Landing() {
                 <p className="mt-3 text-muted">{f.a}</p>
               </details>
             ))}
+          </div>
+          <div className="mt-8 flex flex-col items-center gap-3 rounded-2xl bg-rosewash p-5 text-center sm:flex-row sm:text-left">
+            <Kiki mood="feliz" size={56} />
+            <p className="flex-1">
+              <strong>Ficou outra dúvida?</strong> Pergunte para a Kiki, aqui no cantinho da tela — ou experimente agora, sem criar conta.
+            </p>
+            {DEMO ? (
+              <DemoStart label="Testar a demonstração" />
+            ) : (
+              <ButtonLink to="/e/demo" variant="secondary">
+                Ver um convite de exemplo
+              </ButtonLink>
+            )}
           </div>
         </div>
       </section>
