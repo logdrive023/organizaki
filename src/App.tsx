@@ -3,6 +3,7 @@ import { Navigate, Outlet, Route, Routes, useLocation, useSearchParams } from 'r
 import { Toaster } from './components/toast'
 import { Spinner } from './components/ui'
 import { safeBack } from './lib/nav'
+import { DEMO } from './lib/paths'
 import { useMe } from './lib/session'
 import Landing from './pages/Landing'
 import { Login, Register } from './pages/Auth'
@@ -49,6 +50,11 @@ function ScrollToTop() {
 export default function App() {
   return (
     <>
+      {DEMO && (
+        <p className="bg-ink px-4 py-1.5 text-center text-xs text-white/85">
+          Demonstração: tudo o que você criar fica só neste navegador. Para testar o convidado, abra o link do evento aqui mesmo.
+        </p>
+      )}
       <ScrollToTop />
       <Suspense fallback={<Spinner />}>
         <Routes>
