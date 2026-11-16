@@ -4,10 +4,11 @@ import { Link, NavLink } from 'react-router-dom'
 import { useMe } from '../lib/session'
 import { ButtonLink, Logo } from './ui'
 
+// Âncoras pelo roteador: um <a href="/#x"> ignoraria o subcaminho do GitHub Pages (/organizaki/) e cairia na raiz.
 const anchors = [
-  { href: '/#como-funciona', label: 'Como funciona' },
-  { href: '/#recursos', label: 'Recursos' },
-  { href: '/#perguntas', label: 'Perguntas' },
+  { hash: 'como-funciona', label: 'Como funciona' },
+  { hash: 'recursos', label: 'Recursos' },
+  { hash: 'perguntas', label: 'Perguntas' },
 ]
 
 export function SiteHeader() {
@@ -21,9 +22,9 @@ export function SiteHeader() {
         </Link>
         <nav className="hidden items-center gap-6 text-sm font-medium text-muted md:flex">
           {anchors.map((a) => (
-            <a key={a.href} href={a.href} className="hover:text-ink">
+            <Link key={a.hash} to={{ pathname: '/', hash: a.hash }} className="hover:text-ink">
               {a.label}
-            </a>
+            </Link>
           ))}
         </nav>
         <div className="hidden items-center gap-2 md:flex">
@@ -46,9 +47,9 @@ export function SiteHeader() {
         <div className="border-t border-line bg-paper px-4 pb-4 md:hidden">
           <nav className="flex flex-col py-2">
             {anchors.map((a) => (
-              <a key={a.href} href={a.href} onClick={() => setOpen(false)} className="py-3 font-medium">
+              <Link key={a.hash} to={{ pathname: '/', hash: a.hash }} onClick={() => setOpen(false)} className="py-3 font-medium">
                 {a.label}
-              </a>
+              </Link>
             ))}
           </nav>
           {me ? (
@@ -80,9 +81,9 @@ export function SiteFooter() {
         </div>
         <nav className="flex flex-col gap-2" aria-label="Produto">
           <span className="text-sm font-semibold">Produto</span>
-          <a className={link} href="/#como-funciona">
+          <Link className={link} to={{ pathname: '/', hash: 'como-funciona' }}>
             Como funciona
-          </a>
+          </Link>
           <Link className={link} to="/e/demo">
             Ver um evento de exemplo
           </Link>

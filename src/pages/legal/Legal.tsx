@@ -429,18 +429,19 @@ export function Cookies() {
               items={[
                 'ferramentas de análise, como Google Analytics;',
                 'pixels de redes sociais ou de anúncios;',
-                'fontes, mapas ou scripts carregados de outros sites — as fontes são servidas pelo próprio Organizaki;',
+                'fontes ou scripts carregados de outros sites — as fontes são servidas pelo próprio Organizaki;',
                 'anúncios de redes externas: o espaço de anúncio do plano gratuito mostra apenas conteúdo do próprio Organizaki, sem rastreamento.',
               ]}
             />
           ),
         },
         {
-          title: 'Links externos',
+          title: 'Mapa e links externos',
           body: (
             <p>
-              A página do evento pode ter um link “Ver no mapa”, que abre o Google Maps. Só quando você clica nele o Google passa a receber dados seus, conforme
-              a política de privacidade dele. Antes do clique, nada é carregado do Google.
+              Quando o evento tem endereço, o convite mostra um mapa do Google Maps embutido, que só carrega ao chegar perto dele na tela. Ao carregar, o
+              Google recebe dados técnicos do seu navegador (como o endereço IP) e pode usar cookies próprios, conforme a política de privacidade dele. Os
+              botões “Abrir no Waze” e “Google Maps” só levam você ao aplicativo escolhido quando você toca neles.
             </p>
           ),
         },

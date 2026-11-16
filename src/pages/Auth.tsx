@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Sparkles } from 'lucide-react'
+import { Confetti, HandHeart } from '../components/Decor'
 import { toast } from '../components/toast'
 import { Button, Card, Input, Logo } from '../components/ui'
 import { errorMessage, fieldErrors, post } from '../lib/api'
@@ -10,11 +12,13 @@ import type { Session } from '../lib/types'
 
 function AuthShell({ title, subtitle, children, footer }: { title: string; subtitle: string; children: React.ReactNode; footer: React.ReactNode }) {
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-10">
-      <Link to="/" className="mb-8" aria-label="Voltar para o início">
+    <div className="aura relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-4 py-10">
+      <Confetti />
+      <Link to="/" className="relative mb-8" aria-label="Voltar para o início">
         <Logo />
       </Link>
-      <Card className="w-full max-w-sm p-6 sm:p-8">
+      <Card className="enter relative w-full max-w-sm p-6 shadow-xl shadow-brand/5 sm:p-8">
+        <HandHeart className="absolute -top-4 -right-3 size-9 rotate-12 text-brand" />
         <h1 className="text-2xl font-semibold">{title}</h1>
         <p className="mt-1 mb-6 text-sm text-muted">{subtitle}</p>
         {children}
@@ -82,7 +86,8 @@ export function Login() {
   )
 }
 
-function DemoButtons() {
+/** Entra direto na conta de demonstração (só existe no build do Pages, VITE_DEMO=true). */
+export function DemoStart({ label = 'Testar a demonstração', className }: { label?: string; className?: string }) {
   const setSession = useSession((s) => s.setSession)
   const navigate = useNavigate()
   const [params] = useSearchParams()
@@ -91,6 +96,14 @@ function DemoButtons() {
     setSession(demoSession() as Session)
     navigate(safeBack(params.get('volta')), { replace: true })
   }
+  return (
+    <Button variant="secondary" className={className} onClick={enter}>
+      <Sparkles className="size-4" /> {label}
+    </Button>
+  )
+}
+
+function DemoButtons() {
   async function reset() {
     const { resetDemo } = await import('../lib/demo')
     resetDemo()
@@ -98,9 +111,8 @@ function DemoButtons() {
   }
   return (
     <div className="mt-6 space-y-2 border-t border-line pt-6">
-      <Button variant="secondary" className="w-full" onClick={enter}>
-        Entrar na demonstração
-      </Button>
+      <p className="text-center text-xs text-muted">Só quer ver como funciona?</p>
+      <DemoStart className="w-full" />
       <button onClick={reset} className="w-full text-center text-xs text-muted underline">
         Recomeçar a demonstração do zero
       </button>
@@ -123,7 +135,7 @@ export function Register() {
   return (
     <AuthShell
       title="Crie seu evento grátis"
-      subtitle="Leva um minuto. Sem cartão de crédito."
+      subtitle="Leva 2 minutos. Sem cartão de crédito."
       footer={
         <>
           Já tem conta?{' '}
@@ -153,6 +165,7 @@ export function Register() {
           .
         </p>
       </form>
+      {DEMO && <DemoButtons />}
     </AuthShell>
   )
 }

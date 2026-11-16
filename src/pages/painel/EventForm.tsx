@@ -65,7 +65,7 @@ export default function EventForm() {
             <Input label="Data" type="date" min={editing ? undefined : todayISO()} value={form.date} onChange={set('date')} error={errors.date} />
             <Input label="Horário (opcional)" type="time" value={form.time} onChange={set('time')} error={errors.time} />
           </div>
-          <Input label="Local" value={form.location} onChange={set('location')} error={errors.location} placeholder="Endereço ou nome do lugar" hint="Vira um link para o mapa na página do convite." />
+          <Input label="Local" value={form.location} onChange={set('location')} error={errors.location} placeholder="Ex.: Espaço Villa Garden, Av. das Flores, 1500, São Paulo" hint="Escreva o endereço completo: o convite mostra o mapa e abre o Waze ou o Google Maps com a rota." />
           <Textarea label="Recado para os convidados" value={form.description} onChange={set('description')} error={errors.description} rows={5} placeholder="Conte o que vai acontecer, traje, horários…" />
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="secondary" onClick={() => navigate(-1)}>

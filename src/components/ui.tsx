@@ -11,6 +11,7 @@ import {
   type TextareaHTMLAttributes,
 } from 'react'
 import { Link, type LinkProps } from 'react-router-dom'
+import { Kiki } from './Kiki'
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
@@ -121,7 +122,10 @@ export function Spinner({ label = 'Carregando…' }: { label?: string }) {
 export function Empty({ icon, title, text, action }: { icon: ReactNode; title: string; text: string; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-line px-6 py-14 text-center">
-      <div className="grid size-12 place-items-center rounded-full bg-brand-soft text-brand">{icon}</div>
+      <div className="relative">
+        <Kiki size={72} />
+        <span className="absolute -right-1 -bottom-1 grid size-7 place-items-center rounded-full bg-card text-brand shadow ring-1 ring-blush [&_svg]:size-4">{icon}</span>
+      </div>
       <h3 className="text-lg font-semibold">{title}</h3>
       <p className="max-w-sm text-sm text-muted">{text}</p>
       {action}
@@ -208,14 +212,15 @@ export function Confirm({
   )
 }
 
-export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { id: T; label: string; count?: number }[]; value: T; onChange: (v: T) => void }) {
+export function Tabs<T extends string>({ tabs, value, onChange, stretch }: { tabs: { id: T; label: string; count?: number }[]; value: T; onChange: (v: T) => void; stretch?: boolean }) {
   return (
     <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
-      <div role="tablist" className="inline-flex gap-1 rounded-xl bg-soft p-1">
+      <div role="tablist" className={clsx('gap-1 rounded-xl bg-soft p-1', stretch ? 'grid' : 'inline-flex')} style={stretch ? { gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` } : undefined}>
         {tabs.map((t) => (
           <button
             key={t.id}
             role="tab"
+            data-tab={t.id}
             aria-selected={value === t.id}
             onClick={() => onChange(t.id)}
             className={clsx(
@@ -267,7 +272,7 @@ export function Logo({ className }: { className?: string }) {
   return (
     <span className={clsx('inline-flex items-center gap-2 font-display text-xl font-semibold tracking-tight', className)}>
       <svg viewBox="0 0 64 64" className="size-7" aria-hidden>
-        <rect width="64" height="64" rx="16" fill="#e0523f" />
+        <rect width="64" height="64" rx="16" fill="#b4493f" />
         <path d="M20 34.5l8 8 16-18" fill="none" stroke="#fff" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
       organizaki

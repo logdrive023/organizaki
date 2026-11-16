@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AdSlot } from '../../components/AdSlot'
 import { GiftManager } from '../../components/GiftManager'
 import { GuestManager } from '../../components/GuestManager'
+import { Location } from '../../components/Location'
 import { StatsView } from '../../components/StatsView'
 import { toast } from '../../components/toast'
 import { Badge, Button, ButtonLink, Card, Confirm, ErrorBox, Spinner, Tabs } from '../../components/ui'
@@ -115,7 +116,12 @@ export default function EventDetail() {
         ]}
       />
       <div className="mt-6">
-        {tab === 'resumo' && <Summary id={id} />}
+        {tab === 'resumo' && (
+          <div className="space-y-6">
+            <Summary id={id} />
+            {e.location && <Location place={e.location} compact />}
+          </div>
+        )}
         {tab === 'convidados' && <EventGuests id={id} />}
         {tab === 'presentes' && <EventGifts id={id} />}
         {tab === 'detalhes' && (

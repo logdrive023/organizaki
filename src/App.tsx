@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { Navigate, Outlet, Route, Routes, useLocation, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, Outlet, Route, Routes, useLocation, useSearchParams } from 'react-router-dom'
+import { Helpers } from './components/Helpers'
 import { Toaster } from './components/toast'
 import { Spinner } from './components/ui'
 import { safeBack } from './lib/nav'
@@ -42,19 +43,54 @@ function GuestOnly() {
 function ScrollToTop() {
   const { pathname, hash } = useLocation()
   useEffect(() => {
-    if (!hash) window.scrollTo(0, 0)
+    if (!hash) {
+      window.scrollTo(0, 0)
+      return
+    }
+    // A seção pode ainda não ter montado (página carregando): tenta por um instante.
+    let tries = 0
+    const t = setInterval(() => {
+      const el = document.getElementById(decodeURIComponent(hash.slice(1)))
+      if (el || ++tries > 20) {
+        clearInterval(t)
+        el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 50)
+    return () => clearInterval(t)
   }, [pathname, hash])
   return null
+}
+
+/** Faixa do modo demonstração: no convite, lembra que é a visão do convidado; no resto, leva até ele. */
+function DemoBar() {
+  const { pathname } = useLocation()
+  const link = 'font-semibold text-white underline underline-offset-2'
+  return (
+    <p className="bg-ink px-4 py-1.5 text-center text-xs text-white/85">
+      {pathname.startsWith('/e/') ? (
+        <>
+          Você está vendo o convite como o convidado.{' '}
+          <Link to="/painel" className={link}>
+            Voltar ao painel
+          </Link>
+        </>
+      ) : (
+        <>
+          Você está na demonstração: nada sai deste navegador.{' '}
+          <Link to="/e/demo" className={link}>
+            Abra o convite
+          </Link>{' '}
+          para ver o que o convidado vê.
+        </>
+      )}
+    </p>
+  )
 }
 
 export default function App() {
   return (
     <>
-      {DEMO && (
-        <p className="bg-ink px-4 py-1.5 text-center text-xs text-white/85">
-          Demonstração: tudo o que você criar fica só neste navegador. Para testar o convidado, abra o link do evento aqui mesmo.
-        </p>
-      )}
+      {DEMO && <DemoBar />}
       <ScrollToTop />
       <Suspense fallback={<Spinner />}>
         <Routes>
@@ -85,6 +121,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+      <Helpers />
       <Toaster />
     </>
   )

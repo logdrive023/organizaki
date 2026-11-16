@@ -2,6 +2,7 @@ import { CalendarDays, CalendarHeart, Gift, MapPin, Plus, Users } from 'lucide-r
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AdSlot } from '../../components/AdSlot'
+import { Confetti, HandHeart, Sprig } from '../../components/Decor'
 import { Badge, ButtonLink, Card, Empty, ErrorBox, Spinner, Tabs } from '../../components/ui'
 import { countdown, shortDate } from '../../lib/format'
 import { useEvents } from '../../lib/queries'
@@ -31,15 +32,22 @@ export default function Events() {
 
   return (
     <>
-      <PageTitle
-        title={`Oi, ${me?.name.split(' ')[0] ?? ''}!`}
-        subtitle="Seus eventos, do rascunho à festa."
-        action={
+      <div className="aura relative mb-6 overflow-hidden rounded-3xl border border-line px-5 py-6 sm:px-8 sm:py-8">
+        <Confetti />
+        <Sprig className="absolute -right-4 -bottom-6 size-32 text-brand/20" />
+        <div className="relative flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="font-display text-lg text-brand italic">Que bom te ver por aqui</p>
+            <h1 className="text-3xl font-semibold sm:text-4xl">
+              Oi, {me?.name.split(' ')[0] ?? ''}! <HandHeart className="inline size-8 -translate-y-1 rotate-12 text-brand" />
+            </h1>
+            <p className="mt-1 text-muted">Seus eventos, do primeiro rascunho ao grande dia.</p>
+          </div>
           <ButtonLink to="/painel/eventos/novo">
             <Plus className="size-4" /> Novo evento
           </ButtonLink>
-        }
-      />
+        </div>
+      </div>
       {events.isPending ? (
         <Spinner />
       ) : events.error ? (
@@ -80,9 +88,9 @@ export default function Events() {
 function EventCard({ event: e }: { event: EventItem }) {
   return (
     <Link to={`/painel/eventos/${e.id}`} className="group block min-w-0">
-      <Card className="h-full overflow-hidden transition-shadow group-hover:shadow-md">
+      <Card className="h-full overflow-hidden transition-all group-hover:-translate-y-0.5 group-hover:shadow-lg group-hover:shadow-brand/10">
         <div className="relative aspect-[16/9] bg-soft">
-          {e.coverUrl ? <img src={e.coverUrl} alt="" loading="lazy" className="h-full w-full object-cover" /> : <CalendarHeart className="absolute inset-0 m-auto size-10 text-muted/40" />}
+          {e.coverUrl ? <img src={e.coverUrl} alt="" loading="lazy" className="h-full w-full object-cover" /> : <div className="aura grid h-full w-full place-items-center"><HandHeart className="size-12 text-brand/60" /></div>}
           <span className="absolute top-3 left-3">{e.status === 'active' ? <Badge tone="ok">Publicado</Badge> : <Badge tone="wait">Rascunho</Badge>}</span>
         </div>
         <div className="p-4">
