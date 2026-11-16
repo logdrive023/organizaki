@@ -1,0 +1,63 @@
+@import 'tailwindcss';
+
+/* Identidade: papel creme de convite, coral de festa, tinta quase preta. Fraunces nos títulos, Inter no resto. */
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+
+  --color-paper: #fbf7f2;
+  --color-card: #ffffff;
+  --color-ink: #1f1a17;
+  --color-muted: #6b625c;
+  --color-line: #ebe3da;
+  --color-soft: #f4ede5;
+
+  --color-brand: #e0523f;
+  --color-brand-dark: #c23f2d;
+  --color-brand-soft: #fde8e3;
+
+  --color-ok: #2f7d55;
+  --color-ok-soft: #e3f3ea;
+  --color-wait: #a56a00;
+  --color-wait-soft: #fbf0d9;
+  --color-no: #b4372b;
+  --color-no-soft: #fbe5e2;
+
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+}
+
+html {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  min-height: 100dvh;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+dialog::backdrop {
+  background: rgb(31 26 23 / 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
