@@ -5,7 +5,8 @@ import { ApiError } from './api'
 import { appUrl, asset } from './paths'
 import type { AppNotification, EventItem, Gift, Guest, GuestStatus, Me, NotificationType, Reservation, Stats } from './types'
 
-const KEY = 'ok.demo.db'
+// v2: endereço real no evento demo (o mapa marcava outro lugar). Mudar a chave recria a demonstração.
+const KEY = 'ok.demo.db.v2'
 export const DEMO_EMAIL = 'demo@organizaki.test'
 const DEMO_PASSWORD = 'organizaki123'
 const PREMIUM_CENTS = 1000
@@ -86,7 +87,7 @@ function seed(): DB {
   const ev: EventRow = {
     id: id(), ownerId: u.id, slug: 'demo', title: 'Casamento de Maria e João', status: 'active',
     description: 'Queremos você com a gente nesse dia! Cerimônia ao ar livre seguida de jantar e música ao vivo.',
-    date: isoDay(60), time: '17:00', location: 'Espaço Villa Garden, Av. das Flores, 1500, São Paulo - SP',
+    date: isoDay(60), time: '17:00', location: 'Parque Villa-Lobos, Av. Professor Fonseca Rodrigues, 2001, São Paulo - SP',
     coverUrl: asset('img/evento-casamento.webp'), createdAt: now(), updatedAt: now(),
   }
   const guests: [string, string, GuestStatus][] = [
@@ -99,7 +100,7 @@ function seed(): DB {
     ['Jogo de cama casal', 'Algodão 300 fios, tons claros.', 'presente-cama', 24990, 2],
     ['Cafeteira elétrica', 'Para o café da manhã de domingo.', 'presente-cafeteira', 18990, 1],
     ['Aspirador robô', 'Limpa enquanto a gente comemora.', 'presente-aspirador', 129900, 1],
-    ['Vale-surpresa', 'Contribua com qualquer valor para a lua de mel.', 'presente-caixa', 10000, 10],
+    ['Vale-surpresa', 'Uma ajudinha para a lua de mel.', 'presente-caixa', 10000, 10],
   ]
   return {
     users: [u],

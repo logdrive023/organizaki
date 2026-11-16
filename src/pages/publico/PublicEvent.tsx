@@ -1,12 +1,15 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { CalendarDays, Check, Clock, ExternalLink, Gift, Heart, MapPin, PartyPopper, Share2, Undo2 } from 'lucide-react'
+import { CalendarDays, Check, ExternalLink, Gift, Heart, MapPin, Navigation, Share2, Undo2 } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Confetti, HandHeart, Sprig } from '../../components/Decor'
+import { Kiki } from '../../components/Kiki'
+import { Location } from '../../components/Location'
 import { toast } from '../../components/toast'
 import { Badge, Button, ButtonLink, Card, Empty, ErrorBox, Input, Logo, Modal, Progress, Spinner, Tabs, Textarea } from '../../components/ui'
 import { ApiError, errorMessage, fieldErrors, get, post } from '../../lib/api'
-import { countdown, longDate, mapsUrl, money } from '../../lib/format'
+import { countdown, longDate, money } from '../../lib/format'
 import { appUrl } from '../../lib/paths'
 import { dropTicket, isPurchasedHere, markPurchasedHere, saveTicket, ticketFor } from '../../lib/tickets'
 import type { InvitePreview, PublicEvent as PublicEventT, PublicGift, Ticket } from '../../lib/types'
@@ -41,78 +44,138 @@ export default function PublicEvent() {
     }
   }
 
-  return (
-    <div className="min-h-dvh pb-16">
-      <div className="relative h-56 bg-soft sm:h-80">
-        {e.coverUrl ? <img src={e.coverUrl} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full bg-gradient-to-br from-brand-soft to-soft" />}
-        <div className="absolute inset-0 bg-gradient-to-t from-ink/60 to-transparent" />
-        <Link to="/" className="absolute top-4 left-4 rounded-full bg-paper/90 px-3 py-1.5 backdrop-blur" aria-label="Organizaki">
-          <Logo className="text-base [&_svg]:size-5" />
-        </Link>
-        <button onClick={share} className="absolute top-4 right-4 grid size-10 place-items-center rounded-full bg-paper/90 backdrop-blur" aria-label="Compartilhar evento">
-          <Share2 className="size-5" />
-        </button>
-      </div>
+  const goTo = (t: Tab, anchor = 'abas') => {
+    setTab(t)
+    requestAnimationFrame(() => document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }
 
-      <div className="mx-auto -mt-16 max-w-3xl px-4">
-        <Card className="relative p-5 shadow-lg sm:p-8">
-          <p className="text-xs font-semibold tracking-wide text-brand uppercase">{countdown(e.date)}</p>
-          <h1 className="mt-1 text-3xl leading-tight font-semibold sm:text-4xl">{e.title}</h1>
-          <p className="mt-1 text-sm text-muted">Organizado por {e.hostName}</p>
-          <div className="mt-5 grid gap-3 text-sm sm:grid-cols-3">
-            <Info icon={CalendarDays} text={longDate(e.date)} />
-            {e.time && <Info icon={Clock} text={e.time.replace(':', 'h')} />}
-            {e.location && (
-              <a href={mapsUrl(e.location)} target="_blank" rel="noreferrer" className="flex items-start gap-2 hover:text-brand-dark">
-                <MapPin className="mt-0.5 size-4 shrink-0 text-brand" />
-                <span className="underline decoration-line underline-offset-2">{e.location}</span>
-              </a>
-            )}
+  return (
+    <div className="min-h-dvh pb-28 sm:pb-16">
+      {/* Capa: o convite começa pela foto, com o nome do evento por cima */}
+      <header className="relative flex min-h-[26rem] flex-col justify-end overflow-hidden sm:min-h-[32rem]">
+        {e.coverUrl ? (
+          <img src={e.coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        ) : (
+          <div className="aura absolute inset-0">
+            <Confetti />
           </div>
-          {e.confirmed > 0 && (
-            <p className="mt-4 inline-flex items-center gap-1.5 text-sm text-ok">
-              <Heart className="size-4" /> {e.confirmed} {e.confirmed === 1 ? 'pessoa confirmada' : 'pessoas confirmadas'}
-            </p>
-          )}
+        )}
+        <div className={clsx('absolute inset-0', e.coverUrl ? 'bg-gradient-to-t from-ink/85 via-ink/30 to-ink/10' : 'bg-gradient-to-t from-paper/0 to-transparent')} />
+        <div className="absolute top-4 right-4 left-4 flex items-center justify-between">
+          <Link to="/" className="rounded-full bg-paper/90 px-3 py-1.5 shadow-sm backdrop-blur" aria-label="Organizaki">
+            <Logo className="text-base [&_svg]:size-5" />
+          </Link>
+          <button onClick={share} className="grid size-10 place-items-center rounded-full bg-paper/90 shadow-sm backdrop-blur" aria-label="Compartilhar evento">
+            <Share2 className="size-5" />
+          </button>
+        </div>
+        <div className={clsx('enter relative mx-auto w-full max-w-3xl px-5 pt-24 pb-10', e.coverUrl ? 'text-white' : 'text-ink')}>
+          <p className={clsx('font-display text-lg italic', e.coverUrl ? 'text-white/85' : 'text-brand')}>Você está convidado(a) para</p>
+          <h1 className="mt-1 text-4xl leading-[1.05] font-semibold sm:text-6xl">{e.title}</h1>
+          <div className="mt-5 flex flex-wrap items-center gap-2 text-sm">
+            <span className="rounded-full bg-brand px-3 py-1 font-semibold text-white shadow-sm">{countdown(e.date)}</span>
+            <span className={clsx('rounded-full px-3 py-1 backdrop-blur', e.coverUrl ? 'bg-white/15' : 'bg-card/80')}>com carinho, {e.hostName}</span>
+          </div>
+        </div>
+      </header>
+
+      <div className="relative mx-auto -mt-6 max-w-3xl space-y-6 px-4">
+        {/* Quando × Onde */}
+        <Card className="enter grid divide-y divide-line shadow-xl shadow-ink/5 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+          <div className="flex items-start gap-3 p-5">
+            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand-dark">
+              <CalendarDays className="size-5" />
+            </span>
+            <div>
+              <p className="text-xs font-semibold tracking-wide text-muted uppercase">Quando</p>
+              <p className="mt-0.5 font-semibold first-letter:uppercase">{longDate(e.date)}</p>
+              {e.time && <p className="text-sm text-muted">às {e.time.replace(':', 'h')}</p>}
+            </div>
+          </div>
+          <button onClick={() => goTo('info', 'local')} disabled={!e.location} className="flex items-start gap-3 p-5 text-left enabled:hover:bg-soft/60">
+            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-blush text-brand-dark">
+              <MapPin className="size-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold tracking-wide text-muted uppercase">Onde</p>
+              <p className="mt-0.5 font-semibold">{e.location || 'Local a confirmar'}</p>
+              {e.location && <p className="text-sm font-medium text-brand-dark">Ver mapa e como chegar →</p>}
+            </div>
+          </button>
         </Card>
 
-        <div className="mt-6">
+        {e.confirmed > 0 && (
+          <p className="flex items-center justify-center gap-1.5 text-sm text-ok">
+            <Heart className="size-4 fill-ok/20" /> {e.confirmed} {e.confirmed === 1 ? 'pessoa já confirmou' : 'pessoas já confirmaram'}
+          </p>
+        )}
+
+        <div id="abas" className="scroll-mt-4">
           <Tabs<Tab>
             value={tab}
             onChange={setTab}
+            stretch
             tabs={[
-              { id: 'info', label: 'O evento' },
-              { id: 'presentes', label: 'Lista de presentes' },
-              { id: 'presenca', label: 'Confirmar presença' },
+              { id: 'info', label: 'Convite' },
+              { id: 'presentes', label: 'Presentes' },
+              { id: 'presenca', label: 'Confirmar' },
             ]}
           />
         </div>
 
-        <div className="mt-6">
+        <div>
           {tab === 'info' && (
-            <Card className="p-5 sm:p-8">
-              {e.description ? <p className="leading-relaxed whitespace-pre-line">{e.description}</p> : <p className="text-muted">Os detalhes chegam em breve.</p>}
-              <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-                <Button onClick={() => setTab('presenca')}>Confirmar presença</Button>
-                <Button variant="secondary" onClick={() => setTab('presentes')}>
-                  Ver a lista de presentes
-                </Button>
-              </div>
-            </Card>
+            <div className="space-y-6">
+              <Card className="relative overflow-hidden p-6 sm:p-8">
+                <Sprig className="absolute -right-4 -bottom-4 size-28 text-brand/20" />
+                <p className="flex items-center gap-2 text-xs font-semibold tracking-wide text-brand uppercase">
+                  <HandHeart className="size-5 text-brand" /> Um recado de {e.hostName}
+                </p>
+                {e.description ? (
+                  <p className="relative mt-3 font-display text-xl leading-relaxed whitespace-pre-line">{e.description}</p>
+                ) : (
+                  <p className="mt-3 text-muted">Os detalhes chegam em breve. Enquanto isso, já dá para confirmar presença.</p>
+                )}
+                <div className="relative mt-6 flex flex-col gap-2 sm:flex-row">
+                  <Button onClick={() => goTo('presenca')}>Confirmar presença</Button>
+                  <Button variant="secondary" onClick={() => goTo('presentes')}>
+                    <Gift className="size-4" /> Ver a lista de presentes
+                  </Button>
+                </div>
+              </Card>
+              {e.location && (
+                <div id="local" className="scroll-mt-4">
+                  <Location place={e.location} />
+                </div>
+              )}
+            </div>
           )}
           {tab === 'presentes' && <GiftList slug={slug} />}
-          {tab === 'presenca' && <RSVPForm slug={slug} invite={invite} onGifts={() => setTab('presentes')} />}
+          {tab === 'presenca' && <RSVPForm slug={slug} invite={invite} onGifts={() => goTo('presentes')} />}
         </div>
-      </div>
-    </div>
-  )
-}
 
-function Info({ icon: Icon, text }: { icon: typeof Clock; text: string }) {
-  return (
-    <div className="flex items-start gap-2">
-      <Icon className="mt-0.5 size-4 shrink-0 text-brand" />
-      <span className="first-letter:uppercase">{text}</span>
+        <p className="flex items-center justify-center gap-1.5 pt-6 text-xs text-muted">
+          Feito com <Heart className="size-3.5 fill-brand text-brand" /> no Organizaki
+        </p>
+      </div>
+
+      {/* Barra fixa no celular: as duas coisas que o convidado mais quer fazer */}
+      {tab !== 'presenca' && (
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-card/95 p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:hidden">
+          <div className="grid grid-cols-2 gap-2">
+            <Button onClick={() => goTo('presenca')}>Vou! 🎉</Button>
+            {e.location ? (
+              <Button variant="secondary" onClick={() => goTo('info', 'local')}>
+                <Navigation className="size-4" /> Como chegar
+              </Button>
+            ) : (
+              <Button variant="secondary" onClick={() => goTo('presentes')}>
+                Presentes
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -178,8 +241,9 @@ function RSVPForm({ slug, invite, onGifts }: { slug: string; invite: string; onG
   if (done) {
     return (
       <Card className="p-8 text-center">
-        <div className={clsx('mx-auto grid size-14 place-items-center rounded-full', done === 'confirmed' ? 'bg-ok-soft text-ok' : 'bg-soft text-muted')}>
-          {done === 'confirmed' ? <PartyPopper className="size-7" /> : <Heart className="size-7" />}
+        <div className="relative mx-auto w-fit">
+          {done === 'confirmed' && <Confetti />}
+          <Kiki mood={done === 'confirmed' ? 'uau' : 'feliz'} size={88} className="enter" />
         </div>
         <h2 className="mt-4 text-2xl font-semibold">{done === 'confirmed' ? 'Presença confirmada!' : 'Resposta enviada'}</h2>
         <p className="mt-2 text-muted">{done === 'confirmed' ? 'Que alegria! Os anfitriões já foram avisados.' : 'Obrigado por avisar. Os anfitriões vão sentir sua falta.'}</p>
@@ -341,7 +405,7 @@ function GiftCard({ gift: g, onChoose, onChanged }: { gift: PublicGift; onChoose
         {g.description && <p className="mt-1 line-clamp-2 text-sm text-muted">{g.description}</p>}
         <div className="mt-3 flex items-center justify-between text-sm">
           <span className="font-semibold">{g.priceCents ? money(g.priceCents) : 'Valor livre'}</span>
-          <span className="text-muted">{left > 0 ? `${left} de ${g.quantity} disponíveis` : 'Já escolhido'}</span>
+          <span className="text-muted">{left <= 0 ? 'Já escolhido' : left === 1 ? 'Resta 1' : `${left} de ${g.quantity} disponíveis`}</span>
         </div>
         <div className="mt-2">
           <Progress value={g.reserved / g.quantity} tone="ok" />
